@@ -115,7 +115,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
   const SUPABASE_ANON_KEY = "sb_publishable_9boYX3SMchqVqLSgVtqCmg_hScG9Zel";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const CATS = ["Produce","Meat","Dairy & Eggs","Grains & Bread","Pantry & Canned","Spices & Condiments","Frozen","Other"];
+  const CATS = ["Produce","Meat","Dairy & Eggs","Grains & Bread","Pantry & Canned","Spices & Condiments","Beverages & Broths","Frozen","Other"];
   const PROTEINS = ["Chicken","Beef","Pork","Turkey","Vegetarian","Other"];
   const UNITS = ["lb","oz","g","kg","cup","tbsp","tsp","count","can","jar","package","other"];
   const TRY_CHANCE_OPTIONS = [
@@ -136,13 +136,14 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     "package":"package","packages":"package","pkg":"package","pkgs":"package"
   };
   const CATEGORY_HINTS = [
+    [/wine|beer|broth|stock|juice|soda/i, "Beverages & Broths"],
     [/chicken|beef|pork|turkey|steak|sausage|bacon|ground meat|lamb/i, "Meat"],
     [/milk|cheese|butter|egg|cream|yogurt/i, "Dairy & Eggs"],
-    [/flour|bread|rice|pasta|tortilla|noodle/i, "Grains & Bread"],
-    [/onion|garlic|pepper|tomato|lettuce|carrot|potato|herb|cilantro|parsley|lemon|lime/i, "Produce"],
-    [/salt|cumin|paprika|oregano|basil|thyme|spice|sauce|vinegar|oil/i, "Spices & Condiments"],
-    [/frozen/i, "Frozen"],
-    [/can |canned|jar |beans|broth|stock/i, "Pantry & Canned"]
+    [/black pepper|peppercorn|salt|cumin|paprika|oregano|basil|thyme|spice|vinegar|oil|ketchup|mustard|mayo/i, "Spices & Condiments"],
+    [/flour|bread|rice|pasta(?! sauce)|tortilla|noodle/i, "Grains & Bread"],
+    [/paste|canned|can\b|jar|beans/i, "Pantry & Canned"],
+    [/onion|garlic|bell pepper|jalapeno|tomato|lettuce|carrot|potato|herb|cilantro|parsley|lemon|lime/i, "Produce"],
+    [/frozen/i, "Frozen"]
   ];
 
   let state = {
