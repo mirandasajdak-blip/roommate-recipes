@@ -1074,25 +1074,25 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       </div>
     `;
     document.getElementById('shop-exit').addEventListener('click', () => { state.mode='app'; render(); });
-    document.getElementById('shop-add-btn').addEventListener('click', async () => {
+    document.getElementById('shop-add-btn').addEventListener('click', () => {
       const input = document.getElementById('shop-add-input');
       const val = input.value.trim();
       if(!val) return;
       state.extraGrocery.push({ id: 'x'+Math.random().toString(36).slice(2,9), name: val, checked:false });
       input.value = '';
-      await saveMeta();
       renderShoppingMode(root);
+      saveMeta();
     });
     document.getElementById('shop-add-input').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('shop-add-btn').click(); });
-    root.querySelectorAll('.shop-row').forEach(el => el.addEventListener('click', async () => {
+    root.querySelectorAll('.shop-row').forEach(el => el.addEventListener('click', () => {
       if(el.dataset.type === 'extra'){
         const item = state.extraGrocery.find(x => x.id === el.dataset.key);
         if(item) item.checked = !item.checked;
       } else {
         state.checkedGrocery[el.dataset.key] = !state.checkedGrocery[el.dataset.key];
       }
-      await saveMeta();
       renderShoppingMode(root);
+      saveMeta();
     }));
   }
 
