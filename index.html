@@ -1049,7 +1049,9 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         const key = cat+'|'+item.name+'|'+item.unit;
         const displayAmt = formatAmount(item.amount);
         const amtDisplay = item.unit==='count' ? displayAmt : `${displayAmt} ${item.unit}`;
-        rows.push({ type:'recipe', key, label: `${amtDisplay} ${item.name}`.trim(), sortName: item.name, from: item.from.join(' & '), checked: !!state.checkedGrocery[key] });
+        const qtyPart = amtDisplay.trim();
+        const label = qtyPart ? `${item.name} (${qtyPart})` : item.name;
+        rows.push({ type:'recipe', key, label, sortName: item.name, from: item.from.join(' & '), checked: !!state.checkedGrocery[key] });
       });
     });
     state.extraGrocery.forEach(item => { rows.push({ type:'extra', key:item.id, label:item.name, sortName:item.name, from:'', checked:!!item.checked }); });
