@@ -699,24 +699,25 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     const usedProteins = {};
     let picked = [];
     let slotsUsed = 0;
-    for(const r of shuffled){
-      if(slotsUsed >= state.weekSize) break;
+    let leftoversPicked = 0;
+
+    function tryAdd(r, opts){
+      opts = opts || {};
       const cost = r.makesLeftovers ? 2 : 1;
-      if(slotsUsed + cost > state.weekSize) continue;
-      const count = usedProteins[r.protein] || 0;
-      if(count >= 2) continue;
+      if(slotsUsed + cost > state.weekSize) return false;
+      if(picked.includes(r.id)) return false;
+      if(!opts.ignoreProtein && (usedProteins[r.protein]||0) >= 2) return false;
+      if(!opts.allowSecondLeftover && r.makesLeftovers && leftoversPicked >= 1) return false;
       for(let i=0;i<cost;i++) picked.push(r.id);
-      usedProteins[r.protein] = count + 1;
+      usedProteins[r.protein] = (usedProteins[r.protein]||0) + 1;
       slotsUsed += cost;
+      if(r.makesLeftovers) leftoversPicked++;
+      return true;
     }
-    for(const r of shuffled){
-      if(slotsUsed >= state.weekSize) break;
-      const cost = r.makesLeftovers ? 2 : 1;
-      if(picked.includes(r.id)) continue;
-      if(slotsUsed + cost > state.weekSize) continue;
-      for(let i=0;i<cost;i++) picked.push(r.id);
-      slotsUsed += cost;
-    }
+
+    for(const r of shuffled){ if(slotsUsed >= state.weekSize) break; tryAdd(r); }
+    for(const r of shuffled){ if(slotsUsed >= state.weekSize) break; tryAdd(r, {ignoreProtein:true}); }
+
     if(tryPool.length && Math.random() < state.tryChance && picked.length){
       const idx = Math.floor(Math.random()*picked.length);
       const tryPick = tryPool[Math.floor(Math.random()*tryPool.length)];
@@ -725,14 +726,15 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     return picked.slice(0, state.weekSize);
   }
 
-  function guidedSuggestWeek(proteinCounts, maxTime){
+  function guidedSuggestWeek(proteinCounts, maxTime, maxLeftovers){
     const pool = state.recipes.filter(r => {
       const ok = (r.bucket||'rotation')==='rotation' || (r.bucket==='tryList' && r.surpriseEligible!==false);
       if(!ok) return false;
       if(maxTime){ const total=(r.prepMinutes||0)+(r.cookMinutes||0); if(!total || total>maxTime) return false; }
       return true;
     });
-    let picked = []; let slotsUsed = 0; const usedIds = new Set(); const shortfalls = [];
+    const leftoverCap = maxLeftovers === undefined || maxLeftovers === null ? Infinity : maxLeftovers;
+    let picked = []; let slotsUsed = 0; let leftoversUsed = 0; const usedIds = new Set(); const shortfalls = [];
     Object.entries(proteinCounts).forEach(([protein, count]) => {
       if(!count) return;
       let need = count;
@@ -742,8 +744,10 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         if(need <= 0) break;
         const cost = r.makesLeftovers ? 2 : 1;
         if(slotsUsed + cost > state.weekSize) continue;
+        if(r.makesLeftovers && leftoversUsed >= leftoverCap) continue;
         for(let i=0;i<cost;i++) picked.push(r.id);
         usedIds.add(r.id); slotsUsed += cost; need -= cost; found++;
+        if(r.makesLeftovers) leftoversUsed++;
       }
       if(need > 0) shortfalls.push({protein, count, found});
     });
@@ -752,8 +756,10 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       if(slotsUsed >= state.weekSize) break;
       const cost = r.makesLeftovers ? 2 : 1;
       if(slotsUsed + cost > state.weekSize) continue;
+      if(r.makesLeftovers && leftoversUsed >= leftoverCap) continue;
       for(let i=0;i<cost;i++) picked.push(r.id);
       usedIds.add(r.id); slotsUsed += cost;
+      if(r.makesLeftovers) leftoversUsed++;
     }
     return { picked: picked.slice(0, state.weekSize), shortfalls };
   }
@@ -833,7 +839,12 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       await saveMeta(); renderWeek(body);
     });
     document.getElementById('dd-clear-week').addEventListener('click', async () => {
-      if(confirm(`Clear all ${state.weekSize} slots for this week?`)){ state.thisWeek = []; await saveMeta(); renderWeek(body); }
+      if(confirm(`Clear all ${state.weekSize} slots — this also empties the grocery list, including anything you added manually. Continue?`)){
+        state.thisWeek = [];
+        state.extraGrocery = [];
+        state.checkedGrocery = {};
+        await saveMeta(); renderWeek(body);
+      }
     });
     const inlineWrap = document.getElementById('dd-inline-recipes');
     if(inlineWrap) renderRecipes(inlineWrap);
@@ -859,6 +870,11 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
             <option value="60">Under 60 min</option>
           </select>
         </div>
+        <div class="dd-field">
+          <label>How many recipes with leftovers?</label>
+          <input type="number" id="g-leftovers" min="0" max="${Math.floor(state.weekSize/2)}" value="1"/>
+          <div class="dd-help" style="margin-top:4px;">Each one fills 2 of your ${state.weekSize} slots. Set to 0 for none, or higher if you want more leftover nights this week.</div>
+        </div>
         <div class="dd-modal-actions">
           <button class="dd-btn secondary" id="g-cancel">Cancel</button>
           <button class="dd-btn" id="g-generate">Generate</button>
@@ -874,7 +890,8 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       back.querySelectorAll('[data-protein]').forEach(el => { const v = parseInt(el.value)||0; if(v>0){ proteinCounts[el.dataset.protein]=v; total+=v; } });
       if(total > state.weekSize){ alert(`That adds up to more than ${state.weekSize} meal-slots. Lower a few counts.`); return; }
       const maxTimeVal = back.querySelector('#g-time').value;
-      const result = guidedSuggestWeek(proteinCounts, maxTimeVal ? +maxTimeVal : null);
+      const maxLeftovers = parseInt(back.querySelector('#g-leftovers').value);
+      const result = guidedSuggestWeek(proteinCounts, maxTimeVal ? +maxTimeVal : null, isNaN(maxLeftovers) ? 1 : maxLeftovers);
       state.thisWeek = result.picked;
       await saveMeta(); back.remove(); renderWeek(weekBody);
       if(result.shortfalls.length){ alert("Couldn't fully fill your request: " + result.shortfalls.map(s => `${s.protein} — wanted ${s.count}, only found ${s.found}`).join('; ')); }
