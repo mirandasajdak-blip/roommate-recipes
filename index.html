@@ -1049,11 +1049,14 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         const key = cat+'|'+item.name+'|'+item.unit;
         const displayAmt = formatAmount(item.amount);
         const amtDisplay = item.unit==='count' ? displayAmt : `${displayAmt} ${item.unit}`;
-        rows.push({ type:'recipe', key, label: `${amtDisplay} ${item.name}`.trim(), from: item.from.join(' & '), checked: !!state.checkedGrocery[key] });
+        rows.push({ type:'recipe', key, label: `${amtDisplay} ${item.name}`.trim(), sortName: item.name, from: item.from.join(' & '), checked: !!state.checkedGrocery[key] });
       });
     });
-    state.extraGrocery.forEach(item => { rows.push({ type:'extra', key:item.id, label:item.name, from:'', checked:!!item.checked }); });
-    rows.sort((a,b) => (a.checked===b.checked) ? 0 : (a.checked ? 1 : -1));
+    state.extraGrocery.forEach(item => { rows.push({ type:'extra', key:item.id, label:item.name, sortName:item.name, from:'', checked:!!item.checked }); });
+    rows.sort((a,b) => {
+      if(a.checked !== b.checked) return a.checked ? 1 : -1;
+      return a.sortName.toLowerCase().localeCompare(b.sortName.toLowerCase());
+    });
     root.innerHTML = `
       <div class="shop-header">
         <h1>🛒 Shopping Mode</h1>
