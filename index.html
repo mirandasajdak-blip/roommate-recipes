@@ -6,15 +6,15 @@
   <title>Roommate Recipes</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --card-bg: #161b22;
-      --line: #30363d;
-      --ink: #c9d1d9;
-      --ink-soft: #8b949e;
-      --mustard: #d4a373;
-      --danger: #f85149;
-      --primary: #238636;
-      --primary-hover: #2ea043;
+      --bg: #faf6ee;
+      --card-bg: #ffffff;
+      --line: #e5dec9;
+      --ink: #2b261f;
+      --ink-soft: #70675b;
+      --mustard: #f1ebd9;
+      --danger: #b03a2e;
+      --primary: #8a6f44;
+      --primary-hover: #735c36;
     }
     body {
       background-color: var(--bg);
@@ -106,7 +106,7 @@
       border: 1px solid var(--line);
     }
     .dd-btn.secondary:hover {
-      background: #21262d;
+      background: var(--mustard);
     }
     .dd-btn.danger {
       background: transparent;
@@ -114,7 +114,7 @@
       border: 1px solid var(--danger);
     }
     .dd-btn.danger:hover {
-      background: rgba(248, 81, 73, 0.1);
+      background: rgba(176, 58, 46, 0.1);
     }
     .dd-chip {
       background: var(--card-bg);
@@ -125,9 +125,9 @@
       cursor: pointer;
     }
     .dd-chip.on {
-      background: var(--mustard);
-      border-color: var(--mustard);
-      color: black;
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
       font-weight: 600;
     }
     .dd-grid {
@@ -162,6 +162,7 @@
       justify-content: center;
       cursor: pointer;
       font-size: 12px;
+      background: var(--card-bg);
     }
     .dd-check.on {
       background: var(--primary);
@@ -177,17 +178,18 @@
       margin-bottom: 12px;
     }
     .dd-tag {
-      background: #21262d;
+      background: var(--mustard);
       padding: 2px 6px;
       border-radius: 4px;
+      color: var(--ink);
     }
     .dd-badge-try {
-      background: rgba(212, 163, 115, 0.15);
-      color: var(--mustard);
+      background: #f5eccd;
+      color: #614d0b;
     }
     .dd-badge-warn {
-      background: rgba(248, 81, 73, 0.15);
-      color: var(--danger);
+      background: #f9dcd9;
+      color: #611b15;
     }
     .ingr-preview {
       font-size: 13px;
@@ -214,7 +216,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -222,7 +224,7 @@
       padding: 20px;
     }
     .dd-modal {
-      background: var(--card-bg);
+      background: var(--bg);
       border: 1px solid var(--line);
       border-radius: 12px;
       max-width: 600px;
@@ -255,7 +257,7 @@
     }
     .dd-field input, .dd-field select, .dd-field textarea {
       width: 100%;
-      background: var(--bg);
+      background: var(--card-bg);
       border: 1px solid var(--line);
       color: var(--ink);
       padding: 8px 12px;
@@ -274,7 +276,7 @@
       margin-bottom: 8px;
     }
     .dd-ingr-row input, .dd-ingr-row select {
-      background: var(--bg);
+      background: var(--card-bg);
       border: 1px solid var(--line);
       color: var(--ink);
       padding: 4px 8px;
@@ -307,7 +309,7 @@
       flex-direction: column;
     }
     .dd-slot.filled {
-      border-left: 4px solid var(--mustard);
+      border-left: 4px solid var(--primary);
     }
     .dd-slot .num {
       font-size: 11px;
@@ -336,8 +338,8 @@
       flex: 1;
     }
     .dd-shared-panel {
-      background: rgba(214, 163, 115, 0.05);
-      border: 1px solid rgba(214, 163, 115, 0.2);
+      background: var(--mustard);
+      border: 1px solid var(--line);
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 24px;
@@ -392,6 +394,7 @@
       justify-content: center;
       cursor: pointer;
       font-size: 10px;
+      background: var(--card-bg);
     }
     .dd-glist-check.on {
       background: var(--primary);
@@ -408,9 +411,9 @@
       margin-left: 8px;
     }
     .dd-warn-banner {
-      background: rgba(248, 81, 73, 0.1);
-      border: 1px solid rgba(248, 81, 73, 0.2);
-      color: #ff7b72;
+      background: #f9dcd9;
+      border: 1px solid var(--line);
+      color: var(--danger);
       padding: 12px;
       border-radius: 6px;
       margin-bottom: 16px;
@@ -553,6 +556,9 @@
         if (!r.ingredients || !Array.isArray(r.ingredients)) {
           r.ingredients = [];
         }
+        r.name = r.name || "Unnamed Recipe";
+        r.protein = r.protein || "Other";
+        r.bucket = r.bucket || "rotation";
         return r;
       });
     }
@@ -648,7 +654,7 @@
       localDb.set('weekSize', JSON.stringify(state.weekSize));
     }
 
-    function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function esc(s){ return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
     function getRecipe(id){ return state.recipes.find(r => r.id === id); }
 
@@ -659,12 +665,12 @@
       if(state.search.trim()){
         const q = state.search.trim().toLowerCase();
         list = list.filter(r =>
-          r.name.toLowerCase().includes(q) ||
+          (r.name || '').toLowerCase().includes(q) ||
           (r.cuisine||'').toLowerCase().includes(q) ||
           (r.ingredients || []).some(i => i.name && i.name.toLowerCase().includes(q))
         );
       }
-      return list.slice().sort((a,b)=>a.name.localeCompare(b.name));
+      return list.slice().sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
     }
 
     function render(){
@@ -695,7 +701,7 @@
         </div>
         <div style="margin:-10px 0 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <div class="dd-shared-note">Data auto-saves locally to your browser instantly. To sync with roommates, copy a share link or export a backup file.</div>
-          <button class="dd-btn secondary" id="dd-share-link-btn" style="padding:5px 10px;font-size:11.5px;background:var(--mustard);color:white;border:none;">Copy Share Link</button>
+          <button class="dd-btn secondary" id="dd-share-link-btn" style="padding:5px 10px;font-size:11.5px;background:#8a6f44;color:white;border:none;">Copy Share Link</button>
           <button class="dd-btn secondary" id="dd-refresh" style="padding:5px 10px;font-size:11.5px;">Refresh</button>
         </div>
         <div id="dd-body"></div>
@@ -921,7 +927,7 @@
 
       function renderIngrRows(){
         const wrap = back.querySelector('#f-ingr-list');
-        wrap.innerHTML = draft.ingredients.map((ing, idx) => `
+        wrap.innerHTML = (draft.ingredients || []).map((ing, idx) => `
           <div class="dd-ingr-row" data-idx="${idx}">
             <input type="text" placeholder="amt" value="${ing.amount ?? ''}" data-field="amount"/>
             <select data-field="unit">${UNITS.map(u=>`<option ${u===ing.unit?'selected':''}>${u}</option>`).join('')}</select>
@@ -933,7 +939,7 @@
         wrap.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => {
           const idx = +el.closest('.dd-ingr-row').dataset.idx;
           const field = el.dataset.field;
-          draft.ingredients[idx][field] = field==='amount' ? el.value : el.value;
+          draft.ingredients[idx][field] = el.value;
         }));
         wrap.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => {
           draft.ingredients.splice(+el.dataset.remove, 1);
@@ -989,9 +995,14 @@
         const timeVal = back.querySelector('#f-time').value;
         draft.timeMinutes = timeVal ? +timeVal : null;
         draft.notes = back.querySelector('#f-notes').value.trim();
-        draft.ingredients = draft.ingredients
+        draft.ingredients = (draft.ingredients || [])
           .filter(i => i.name && i.name.trim())
-          .map(i => ({ name: i.name.trim().toLowerCase(), amount: parseFloat(i.amount) || 0, unit: i.unit, category: i.category }));
+          .map(i => ({ 
+            name: i.name.trim().toLowerCase(), 
+            amount: i.amount ? String(i.amount).trim() : '', 
+            unit: i.unit, 
+            category: i.category 
+          }));
 
         if(existing){
           const idx = state.recipes.findIndex(r=>r.id===existing.id);
@@ -1011,6 +1022,7 @@
         const r = getRecipe(id);
         if(!r) return;
         (r.ingredients || []).forEach(ing => {
+          if (!ing || !ing.name) return;
           const name = ing.name.toLowerCase();
           if(!map[name]) map[name] = [];
           map[name].push({recipeId: id, recipeName: r.name, amount: ing.amount, unit: ing.unit});
@@ -1023,28 +1035,65 @@
       return shared;
     }
 
+    function parseFraction(str) {
+      if (!str) return 0;
+      str = String(str).trim();
+      if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 2) {
+          const num = parseFloat(parts[0]);
+          const den = parseFloat(parts[1]);
+          if (!isNaN(num) && !isNaN(den) && den !== 0) {
+            return num / den;
+          }
+        }
+      }
+      const parsed = parseFloat(str);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function formatAmount(num) {
+      if (num === 0) return '';
+      if (num % 1 === 0) return String(num);
+      const rounded = Math.round(num * 100) / 100;
+      if (rounded === 0.5) return '1/2';
+      if (rounded === 0.25) return '1/4';
+      if (rounded === 0.75) return '3/4';
+      if (rounded === 0.33) return '1/3';
+      if (rounded === 0.66 || rounded === 0.67) return '2/3';
+      return String(rounded);
+    }
+
     function suggestWeek(){
       const pool = state.recipes.filter(r => (r.bucket||'rotation') === 'rotation');
       const tryPool = state.recipes.filter(r => r.bucket === 'tryList' && r.surpriseEligible !== false);
       if(pool.length === 0 && tryPool.length === 0) return [];
+      
       const ingrMap = {};
       pool.forEach(r => (r.ingredients || []).forEach(i => {
-        if(i.category === 'Meat'){
+        if(i && i.category === 'Meat' && i.name){
           ingrMap[i.name] = ingrMap[i.name] || new Set();
           ingrMap[i.name].add(r.id);
         }
       }));
+      
       let pairIds = null;
       const candidates = Object.entries(ingrMap).filter(([name, set]) => set.size > 1);
       if(candidates.length){
         const [name, set] = candidates[Math.floor(Math.random()*candidates.length)];
         pairIds = Array.from(set).slice(0,2);
       }
+      
       let picked = [];
       if(pairIds) picked = pairIds.slice();
       const shuffled = pool.slice().sort(()=>Math.random()-0.5);
       const usedProteins = {};
-      picked.forEach(id => { const r = getRecipe(id); if(r) usedProteins[r.protein] = (usedProteins[r.protein]||0)+1; });
+      
+      picked.forEach(id => { 
+        const r = getRecipe(id); 
+        if(r) usedProteins[r.protein] = (usedProteins[r.protein]||0)+1; 
+      });
+
       for(const r of shuffled){
         if(picked.length >= state.weekSize) break;
         if(picked.includes(r.id)) continue;
@@ -1094,7 +1143,7 @@
 
     function renderWeek(body){
       const shared = findSharedIngredients(state.thisWeek);
-      const colors = ['#5C7A5C','#C98A2E','#B5533C','#3F5A3F','#8A6D3B'];
+      const colors = ['#8a6f44','#b03a2e','#2b261f','#4a5d4e','#7851a9'];
       body.innerHTML = `
         <div class="dd-toolbar">
           <button class="dd-btn" id="dd-suggest">Suggest my week</button>
@@ -1121,7 +1170,10 @@
           `).join('') : `<div class="dd-shared-none">No overlapping ingredients yet — add recipes to this week to see stretch opportunities.</div>`}
         </div>
         <div class="dd-help">Tip: click a recipe's checkbox in the Recipe Box, or use "Suggest my week" to auto-fill open slots.</div>
+        <h3 style="margin-top: 32px; border-top: 1px solid var(--line); padding-top: 24px;">Your Recipe Box</h3>
+        <div id="dd-inline-recipes"></div>
       `;
+      
       const slotsEl = document.getElementById('dd-slots');
       slotsEl.innerHTML = Array.from({length:state.weekSize}).map((_, i) => {
         const id = state.thisWeek[i];
@@ -1131,7 +1183,7 @@
         const noIngr = !r.ingredients || r.ingredients.length === 0;
         return `
           <div class="dd-slot filled">
-            <div class="num">Slot ${i+1} · ${esc(r.protein)}${isTry?' · <span style="color:var(--mustard);">want to try</span>':''}</div>
+            <div class="num">Slot ${i+1} · ${esc(r.protein)}${isTry?' · <span style="color:#614d0b; background:#f5eccd; padding:1px 4px; border-radius:3px;">want to try</span>':''}</div>
             <h4>${esc(r.name)}</h4>
             <div class="meta">${r.cuisine?esc(r.cuisine)+' · ':''}${r.servings||'–'} servings${noIngr?' · <span style="color:var(--danger);">needs ingredients</span>':''}</div>
             <div class="dd-slot-actions">
@@ -1141,6 +1193,7 @@
           </div>
         `;
       }).join('');
+      
       slotsEl.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => {
         state.thisWeek = state.thisWeek.filter(x=>x!==el.dataset.remove);
         saveWeek(); renderWeek(body);
@@ -1177,6 +1230,11 @@
           state.thisWeek = []; saveWeek(); renderWeek(body);
         }
       });
+
+      const inlineWrap = document.getElementById('dd-inline-recipes');
+      if(inlineWrap) {
+        renderRecipes(inlineWrap);
+      }
     }
 
     function openGuidedModal(weekBody){
@@ -1269,11 +1327,12 @@
         const r = getRecipe(id);
         if(!r) return;
         (r.ingredients || []).forEach(ing => {
+          if (!ing || !ing.name) return;
           const cat = ing.category || 'Other';
           groups[cat] = groups[cat] || {};
           const key = ing.name + '|' + ing.unit;
           if(!groups[cat][key]) groups[cat][key] = {name: ing.name, unit: ing.unit, amount: 0, from: []};
-          groups[cat][key].amount += (ing.amount || 0);
+          groups[cat][key].amount += parseFraction(ing.amount);
           groups[cat][key].from.push(r.name);
         });
       });
@@ -1302,7 +1361,8 @@
             ${Object.values(groups[cat]).map(item => {
               const key = cat+'|'+item.name+'|'+item.unit;
               const checked = !!state.checkedGrocery[key];
-              const amtDisplay = item.unit === 'count' ? `${item.amount}` : `${item.amount} ${item.unit}`;
+              const displayAmt = formatAmount(item.amount);
+              const amtDisplay = item.unit === 'count' ? `${displayAmt}` : `${displayAmt} ${item.unit}`;
               return `
               <div class="dd-glist-item ${checked?'checked':''}">
                 <div class="dd-glist-check ${checked?'on':''}" data-key="${esc(key)}">${checked?'✓':''}</div>
@@ -1329,7 +1389,8 @@
         catOrder.forEach(cat => {
           text += cat.toUpperCase() + "\n";
           Object.values(groups[cat]).forEach(item => {
-            const amtDisplay = item.unit === 'count' ? `${item.amount}` : `${item.amount} ${item.unit}`;
+            const displayAmt = formatAmount(item.amount);
+            const amtDisplay = item.unit === 'count' ? `${displayAmt}` : `${displayAmt} ${item.unit}`;
             text += `- ${amtDisplay} ${item.name}\n`;
           });
           text += "\n";
