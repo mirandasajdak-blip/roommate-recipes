@@ -443,12 +443,12 @@
 
     let state = {
       recipes: [],
-      thisWeek: [], // array of recipe ids
+      thisWeek: [],
       tab: 'recipes',
       search: '',
       proteinFilter: null,
-      bucketFilter: null, // 'rotation' | 'tryList' | null (all)
-      checkedGrocery: {}, // key -> bool
+      bucketFilter: null,
+      checkedGrocery: {},
       tryChance: 0.3,
       weekSize: 5,
       loadError: false,
@@ -456,7 +456,6 @@
     };
 
     const SEED = [
-      // ---- Pasta ----
       {name:"Red Sauce", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Pasta e Fagioli", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Fettuccine Alfredo", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
@@ -468,13 +467,10 @@
       {name:"Italian Sausage Pasta", protein:"Pork", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Spaghetti and Meatballs", protein:"Beef", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Stanley Tucci Pasta", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Mexican ----
       {name:"Chicken Tacos", protein:"Chicken", cuisine:"Mexican", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Pork Tacos", protein:"Pork", cuisine:"Mexican", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Enchiladas", protein:"Chicken", cuisine:"Mexican", servings:6, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Curry ----
       {name:"Chicken Tikka Masala", protein:"Chicken", cuisine:"Indian", servings:3, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Comfort Food ----
       {name:"Beef Stew", protein:"Beef", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Chili", protein:"Beef", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Swedish Meatballs", protein:"Beef", cuisine:"Swedish", servings:3, bucket:"rotation", ingredients:[], notes:""},
@@ -487,11 +483,9 @@
       {name:"Chicken and Dumplings", protein:"Chicken", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Chicken Piccata", protein:"Chicken", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Chicken Marsala", protein:"Chicken", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Rice / Bowls ----
       {name:"Chicken Paprikash", protein:"Chicken", cuisine:"Hungarian", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Goulash", protein:"Beef", cuisine:"Hungarian", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Honey Sriracha Chicken", protein:"Chicken", cuisine:"Asian-inspired", servings:3, bucket:"rotation", ingredients:[], notes:"Always exactly 3 — no leftovers."},
-      // ---- Sandwiches & Grill ----
       {name:"Pulled Pork Sandwiches", protein:"Pork", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Italian Sausage Sandwiches", protein:"Pork", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Sloppy Joes", protein:"Beef", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
@@ -501,14 +495,11 @@
       {name:"Chicken (Grilled) w/ Various Seasonings", protein:"Chicken", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Bratwurst and Sauerkraut", protein:"Pork", cuisine:"German", servings:3, bucket:"rotation", ingredients:[], notes:""},
       {name:"Gyros", protein:"Other", cuisine:"Greek", servings:3, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Soup Night ----
       {name:"Minestrone Soup", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Escarole Soup", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"Chicken Noodle Soup", protein:"Chicken", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
       {name:"French Onion Soup", protein:"Vegetarian", cuisine:"French", servings:6, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Lighter Nights ----
       {name:"Salad Night", protein:"Vegetarian", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
-      // ---- Want to Try ----
       {name:"Chicken Teriyaki Bowls", protein:"Chicken", cuisine:"Japanese", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
       {name:"Korean-Inspired Beef Bowls", protein:"Beef", cuisine:"Korean", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
       {name:"Meatball Subs", protein:"Beef", cuisine:"Italian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
@@ -532,7 +523,8 @@
         id: uid(),
         bucket: r.bucket || 'rotation',
         surpriseEligible: r.surpriseEligible !== undefined ? r.surpriseEligible : true,
-        timeMinutes: r.timeMinutes || null
+        timeMinutes: r.timeMinutes || null,
+        ingredients: r.ingredients || []
       }));
     }
 
@@ -555,6 +547,16 @@
       }
     };
 
+    function repairDatabase(recipesArray) {
+      if (!Array.isArray(recipesArray)) return [];
+      return recipesArray.map(r => {
+        if (!r.ingredients || !Array.isArray(r.ingredients)) {
+          r.ingredients = [];
+        }
+        return r;
+      });
+    }
+
     async function loadState(){
       state.loadError = false;
       
@@ -571,8 +573,8 @@
       }
 
       if (hashData) {
-        if (confirm("You are opening a shared recipe list. Do you want to import these recipes? (This will update your dashboard with the shared list)")) {
-          state.recipes = hashData.recipes;
+        if (confirm("You are opening a shared recipe list. Do you want to import these recipes?")) {
+          state.recipes = repairDatabase(hashData.recipes);
           state.thisWeek = hashData.thisWeek || [];
           state.checkedGrocery = hashData.checkedGrocery || {};
           state.tryChance = hashData.tryChance !== undefined ? hashData.tryChance : 0.3;
@@ -596,7 +598,8 @@
 
       if (recipesRaw) {
         try {
-          state.recipes = JSON.parse(recipesRaw);
+          const parsed = JSON.parse(recipesRaw);
+          state.recipes = repairDatabase(parsed);
         } catch(e) {
           state.loadError = true;
         }
@@ -658,7 +661,7 @@
         list = list.filter(r =>
           r.name.toLowerCase().includes(q) ||
           (r.cuisine||'').toLowerCase().includes(q) ||
-          r.ingredients.some(i => i.name.toLowerCase().includes(q))
+          (r.ingredients || []).some(i => i.name && i.name.toLowerCase().includes(q))
         );
       }
       return list.slice().sort((a,b)=>a.name.localeCompare(b.name));
@@ -796,7 +799,7 @@
             const backup = JSON.parse(ev.target.result);
             if(!Array.isArray(backup.recipes)) throw new Error('Not a valid backup file');
             if(!confirm(`This backup has ${backup.recipes.length} recipes. This will REPLACE everything currently in your browser. Continue?`)) return;
-            state.recipes = backup.recipes;
+            state.recipes = repairDatabase(backup.recipes);
             state.thisWeek = backup.thisWeek || [];
             state.checkedGrocery = backup.checkedGrocery || {};
             state.tryChance = backup.tryChance !== undefined ? backup.tryChance : 0.3;
@@ -825,7 +828,7 @@
     function recipeCardHtml(r){
       const inWeek = state.thisWeek.includes(r.id);
       const isTry = (r.bucket||'rotation') === 'tryList';
-      const noIngr = r.ingredients.length === 0;
+      const noIngr = !r.ingredients || r.ingredients.length === 0;
       const preview = noIngr ? '' : r.ingredients.slice(0,4).map(i=>i.name).join(', ') + (r.ingredients.length>4?'…':'');
       return `
         <div class="dd-card" data-id="${r.id}">
@@ -865,6 +868,7 @@
       };
       if(!draft.bucket) draft.bucket = 'rotation';
       if(draft.surpriseEligible === undefined) draft.surpriseEligible = true;
+      if(!draft.ingredients) draft.ingredients = [];
       const back = document.createElement('div');
       back.className = 'dd-modal-back';
       back.innerHTML = `
@@ -1006,7 +1010,7 @@
       recipeIds.forEach(id => {
         const r = getRecipe(id);
         if(!r) return;
-        r.ingredients.forEach(ing => {
+        (r.ingredients || []).forEach(ing => {
           const name = ing.name.toLowerCase();
           if(!map[name]) map[name] = [];
           map[name].push({recipeId: id, recipeName: r.name, amount: ing.amount, unit: ing.unit});
@@ -1024,7 +1028,7 @@
       const tryPool = state.recipes.filter(r => r.bucket === 'tryList' && r.surpriseEligible !== false);
       if(pool.length === 0 && tryPool.length === 0) return [];
       const ingrMap = {};
-      pool.forEach(r => r.ingredients.forEach(i => {
+      pool.forEach(r => (r.ingredients || []).forEach(i => {
         if(i.category === 'Meat'){
           ingrMap[i.name] = ingrMap[i.name] || new Set();
           ingrMap[i.name].add(r.id);
@@ -1124,7 +1128,7 @@
         const r = id ? getRecipe(id) : null;
         if(!r) return `<div class="dd-slot"><div class="num">Slot ${i+1}</div><div class="empty-msg">Empty — add a recipe</div></div>`;
         const isTry = r.bucket === 'tryList';
-        const noIngr = r.ingredients.length === 0;
+        const noIngr = !r.ingredients || r.ingredients.length === 0;
         return `
           <div class="dd-slot filled">
             <div class="num">Slot ${i+1} · ${esc(r.protein)}${isTry?' · <span style="color:var(--mustard);">want to try</span>':''}</div>
@@ -1264,7 +1268,7 @@
       state.thisWeek.forEach(id => {
         const r = getRecipe(id);
         if(!r) return;
-        r.ingredients.forEach(ing => {
+        (r.ingredients || []).forEach(ing => {
           const cat = ing.category || 'Other';
           groups[cat] = groups[cat] || {};
           const key = ing.name + '|' + ing.unit;
@@ -1283,7 +1287,7 @@
       }
       const groups = buildGroceryList();
       const catOrder = CATS.filter(c => groups[c]);
-      const missing = state.thisWeek.map(id=>getRecipe(id)).filter(r => r && r.ingredients.length===0);
+      const missing = state.thisWeek.map(id=>getRecipe(id)).filter(r => r && (!r.ingredients || r.ingredients.length===0));
       body.innerHTML = `
         <div class="dd-toolbar">
           <span class="dd-help">Combined from: ${state.thisWeek.map(id=>esc(getRecipe(id)?.name||'')).join(', ')}</span>
