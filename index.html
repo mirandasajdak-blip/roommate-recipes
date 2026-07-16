@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roommate Recipes</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #faf6ee;
@@ -16,425 +17,81 @@
       --primary: #8a6f44;
       --primary-hover: #735c36;
     }
-    body {
-      background-color: var(--bg);
-      color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      margin: 0;
-      padding: 20px;
-      line-height: 1.5;
-    }
-    #dd-root {
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-    .dd-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 16px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    .dd-header h1 {
-      margin: 0 0 4px 0;
-      font-size: 24px;
-    }
-    .dd-header .sub {
-      color: var(--ink-soft);
-      font-size: 14px;
-    }
-    .dd-tabs {
-      display: flex;
-      gap: 8px;
-    }
-    .dd-tab {
-      padding: 8px 16px;
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .dd-tab.active {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-    }
-    .dd-shared-note {
-      font-size: 12px;
-      color: var(--ink-soft);
-      flex: 1;
-      min-width: 250px;
-    }
-    .dd-toolbar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .dd-search {
-      flex: 1;
-      min-width: 200px;
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      color: var(--ink);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    .dd-btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .dd-btn:hover {
-      background: var(--primary-hover);
-    }
-    .dd-btn.secondary {
-      background: var(--card-bg);
-      color: var(--ink);
-      border: 1px solid var(--line);
-    }
-    .dd-btn.secondary:hover {
-      background: var(--mustard);
-    }
-    .dd-btn.danger {
-      background: transparent;
-      color: var(--danger);
-      border: 1px solid var(--danger);
-    }
-    .dd-btn.danger:hover {
-      background: rgba(176, 58, 46, 0.1);
-    }
-    .dd-chip {
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .dd-chip.on {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-      font-weight: 600;
-    }
-    .dd-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-    .dd-card {
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
-      position: relative;
-      cursor: pointer;
-    }
-    .dd-card h3 {
-      margin: 0 0 8px 0;
-      font-size: 18px;
-      padding-right: 30px;
-    }
-    .dd-check {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 22px;
-      height: 22px;
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 12px;
-      background: var(--card-bg);
-    }
-    .dd-check.on {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-    }
-    .meta {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      font-size: 12px;
-      color: var(--ink-soft);
-      margin-bottom: 12px;
-    }
-    .dd-tag {
-      background: var(--mustard);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: var(--ink);
-    }
-    .dd-badge-try {
-      background: #f5eccd;
-      color: #614d0b;
-    }
-    .dd-badge-warn {
-      background: #f9dcd9;
-      color: #611b15;
-    }
-    .ingr-preview {
-      font-size: 13px;
-      color: var(--ink-soft);
-      border-top: 1px solid var(--line);
-      padding-top: 8px;
-    }
-    .dd-empty {
-      text-align: center;
-      padding: 40px;
-      color: var(--ink-soft);
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      grid-column: 1 / -1;
-    }
-    .dd-empty .display {
-      font-size: 18px;
-      color: var(--ink);
-      margin-bottom: 8px;
-    }
-    .dd-modal-back {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-    .dd-modal {
-      background: var(--bg);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      max-width: 600px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 24px;
-      position: relative;
-    }
-    .dd-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      background: none;
-      border: none;
-      color: var(--ink-soft);
-      font-size: 24px;
-      cursor: pointer;
-    }
-    .dd-field {
-      margin-bottom: 16px;
-    }
-    .dd-field label {
-      display: block;
-      font-size: 12px;
-      text-transform: uppercase;
-      color: var(--ink-soft);
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-    .dd-field input, .dd-field select, .dd-field textarea {
-      width: 100%;
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      color: var(--ink);
-      padding: 8px 12px;
-      border-radius: 6px;
-      box-sizing: border-box;
-    }
-    .dd-row2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .dd-ingr-row {
-      display: grid;
-      grid-template-columns: 60px 100px 1fr 120px 40px;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .dd-ingr-row input, .dd-ingr-row select {
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      color: var(--ink);
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-    .dd-modal-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 24px;
-      border-top: 1px solid var(--line);
-      padding-top: 16px;
-    }
-    .dd-help {
-      font-size: 12px;
-      color: var(--ink-soft);
-    }
-    .dd-week-slots {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .dd-slot {
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
-      min-height: 120px;
-      display: flex;
-      flex-direction: column;
-    }
-    .dd-slot.filled {
-      border-left: 4px solid var(--primary);
-    }
-    .dd-slot .num {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: var(--ink-soft);
-      margin-bottom: 6px;
-    }
-    .dd-slot h4 {
-      margin: 0 0 6px 0;
-      font-size: 16px;
-    }
-    .dd-slot .empty-msg {
-      color: var(--ink-soft);
-      font-size: 13px;
-      margin: auto 0;
-    }
-    .dd-slot-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: auto;
-      padding-top: 12px;
-    }
-    .dd-slot-actions .dd-btn {
-      padding: 4px 8px;
-      font-size: 11px;
-      flex: 1;
-    }
-    .dd-shared-panel {
-      background: var(--mustard);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
-    }
-    .dd-shared-panel h3 {
-      margin: 0 0 12px 0;
-      font-size: 16px;
-    }
-    .dd-shared-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-    .dd-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .dd-shared-none {
-      color: var(--ink-soft);
-      font-size: 13px;
-    }
-    .dd-glist-cat {
-      margin-bottom: 24px;
-    }
-    .dd-glist-cat h3 {
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 8px;
-      margin-bottom: 12px;
-      font-size: 16px;
-    }
-    .dd-glist-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 8px 0;
-      font-size: 14px;
-    }
-    .dd-glist-item.checked {
-      color: var(--ink-soft);
-      text-decoration: line-through;
-    }
-    .dd-glist-check {
-      width: 18px;
-      height: 18px;
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 10px;
-      background: var(--card-bg);
-    }
-    .dd-glist-check.on {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-    }
-    .dd-glist-item .amt {
-      font-weight: 600;
-      margin-right: 6px;
-    }
-    .dd-glist-item .from {
-      font-size: 12px;
-      color: var(--ink-soft);
-      margin-left: 8px;
-    }
-    .dd-warn-banner {
-      background: #f9dcd9;
-      border: 1px solid var(--line);
-      color: var(--danger);
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 16px;
-      font-size: 13px;
-    }
-    .dd-select-inline {
-      background: var(--card-bg);
-      border: 1px solid var(--line);
-      color: var(--ink);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-    }
+    body { background-color: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; line-height: 1.5; }
+    #dd-root { max-width: 1000px; margin: 0 auto; }
+    .dd-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 16px; flex-wrap: wrap; gap: 16px; }
+    .dd-header h1 { margin: 0 0 4px 0; font-size: 24px; }
+    .dd-header .sub { color: var(--ink-soft); font-size: 14px; }
+    .dd-tabs { display: flex; gap: 8px; }
+    .dd-tab { padding: 8px 16px; background: var(--card-bg); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .dd-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .dd-shared-note { font-size: 12px; color: var(--ink-soft); flex: 1; min-width: 250px; }
+    .dd-toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+    .dd-search { flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+    .dd-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .dd-btn:hover { background: var(--primary-hover); }
+    .dd-btn.secondary { background: var(--card-bg); color: var(--ink); border: 1px solid var(--line); }
+    .dd-btn.secondary:hover { background: var(--mustard); }
+    .dd-btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    .dd-btn.danger:hover { background: rgba(176, 58, 46, 0.1); }
+    .dd-chip { background: var(--card-bg); border: 1px solid var(--line); padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+    .dd-chip.on { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+    .dd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+    .dd-card { background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px; padding: 16px; position: relative; cursor: pointer; }
+    .dd-card h3 { margin: 0 0 8px 0; font-size: 18px; padding-right: 30px; }
+    .dd-check { position: absolute; top: 16px; right: 16px; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; background: var(--card-bg); }
+    .dd-check.on { background: var(--primary); border-color: var(--primary); color: white; }
+    .meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
+    .dd-tag { background: var(--mustard); padding: 2px 6px; border-radius: 4px; color: var(--ink); }
+    .dd-badge-try { background: #f5eccd; color: #614d0b; }
+    .dd-badge-warn { background: #f9dcd9; color: #611b15; }
+    .ingr-preview { font-size: 13px; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 8px; }
+    .dd-empty { text-align: center; padding: 40px; color: var(--ink-soft); border: 1px dashed var(--line); border-radius: 8px; grid-column: 1 / -1; }
+    .dd-empty .display { font-size: 18px; color: var(--ink); margin-bottom: 8px; }
+    .dd-modal-back { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .dd-modal { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative; }
+    .dd-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--ink-soft); font-size: 24px; cursor: pointer; }
+    .dd-field { margin-bottom: 16px; }
+    .dd-field label { display: block; font-size: 12px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; font-weight: 600; }
+    .dd-field input, .dd-field select, .dd-field textarea { width: 100%; background: var(--card-bg); border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; border-radius: 6px; box-sizing: border-box; }
+    .dd-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .dd-ingr-row { display: grid; grid-template-columns: 60px 100px 1fr 120px 40px; gap: 8px; margin-bottom: 8px; }
+    .dd-ingr-row input, .dd-ingr-row select { background: var(--card-bg); border: 1px solid var(--line); color: var(--ink); padding: 4px 8px; border-radius: 6px; }
+    .dd-modal-actions { display: flex; gap: 12px; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+    .dd-help { font-size: 12px; color: var(--ink-soft); }
+    .dd-week-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .dd-slot { background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-height: 120px; display: flex; flex-direction: column; }
+    .dd-slot.filled { border-left: 4px solid var(--primary); }
+    .dd-slot .num { font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+    .dd-slot h4 { margin: 0 0 6px 0; font-size: 16px; }
+    .dd-slot .empty-msg { color: var(--ink-soft); font-size: 13px; margin: auto 0; }
+    .dd-slot-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 12px; }
+    .dd-slot-actions .dd-btn { padding: 4px 8px; font-size: 11px; flex: 1; }
+    .dd-shared-panel { background: var(--mustard); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .dd-shared-panel h3 { margin: 0 0 12px 0; font-size: 16px; }
+    .dd-shared-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+    .dd-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dd-shared-none { color: var(--ink-soft); font-size: 13px; }
+    .dd-glist-cat { margin-bottom: 24px; }
+    .dd-glist-cat h3 { border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; font-size: 16px; }
+    .dd-glist-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; font-size: 14px; }
+    .dd-glist-item.checked { color: var(--ink-soft); text-decoration: line-through; }
+    .dd-glist-check { width: 18px; height: 18px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; background: var(--card-bg); }
+    .dd-glist-check.on { background: var(--primary); border-color: var(--primary); color: white; }
+    .dd-glist-item .amt { font-weight: 600; margin-right: 6px; }
+    .dd-glist-item .from { font-size: 12px; color: var(--ink-soft); margin-left: 8px; }
+    .dd-warn-banner { background: #f9dcd9; border: 1px solid var(--line); color: var(--danger); padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
+    .dd-select-inline { background: var(--card-bg); border: 1px solid var(--line); color: var(--ink); padding: 6px 12px; border-radius: 6px; font-size: 13px; }
   </style>
 </head>
 <body>
-
   <div id="dd-root"></div>
-
   <script>
   (function(){
+    const SUPABASE_URL = "https://lsqchnahpenyhuvltbfu.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_9boYX3SMchqVqLSgVtqCmg_hScG9Zel";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const CATS = ["Produce","Meat","Dairy & Eggs","Grains & Bread","Pantry & Canned","Spices & Condiments","Frozen","Other"];
     const PROTEINS = ["Chicken","Beef","Pork","Turkey","Vegetarian","Other"];
     const UNITS = ["lb","oz","g","kg","cup","tbsp","tsp","count","can","jar","package","other"];
@@ -445,17 +102,8 @@
     ];
 
     let state = {
-      recipes: [],
-      thisWeek: [],
-      tab: 'recipes',
-      search: '',
-      proteinFilter: null,
-      bucketFilter: null,
-      checkedGrocery: {},
-      tryChance: 0.3,
-      weekSize: 5,
-      loadError: false,
-      loaded: false
+      recipes: [], thisWeek: [], tab: 'recipes', search: '', proteinFilter: null, bucketFilter: null,
+      checkedGrocery: {}, tryChance: 0.3, weekSize: 5, loadError: false, loaded: false
     };
 
     const SEED = [
@@ -522,40 +170,16 @@
 
     function freshSeed(){
       return SEED.map(r => ({
-        ...r,
-        id: uid(),
-        bucket: r.bucket || 'rotation',
+        ...r, id: uid(), bucket: r.bucket || 'rotation',
         surpriseEligible: r.surpriseEligible !== undefined ? r.surpriseEligible : true,
-        timeMinutes: r.timeMinutes || null,
-        ingredients: r.ingredients || []
+        timeMinutes: r.timeMinutes || null, ingredients: r.ingredients || []
       }));
     }
-
-    const localDb = {
-      get(key) {
-        try {
-          const val = localStorage.getItem(key);
-          return val ? { value: val } : null;
-        } catch(e) {
-          console.error("Local storage read failed", e);
-          return null;
-        }
-      },
-      set(key, val) {
-        try {
-          localStorage.setItem(key, val);
-        } catch(e) {
-          console.error("Local storage write failed", e);
-        }
-      }
-    };
 
     function repairDatabase(recipesArray) {
       if (!Array.isArray(recipesArray)) return [];
       return recipesArray.map(r => {
-        if (!r.ingredients || !Array.isArray(r.ingredients)) {
-          r.ingredients = [];
-        }
+        if (!r.ingredients || !Array.isArray(r.ingredients)) r.ingredients = [];
         r.name = r.name || "Unnamed Recipe";
         r.protein = r.protein || "Other";
         r.bucket = r.bucket || "rotation";
@@ -563,21 +187,23 @@
       });
     }
 
+    async function syncToSupabase() {
+      const payload = { recipes: state.recipes, thisWeek: state.thisWeek, checkedGrocery: state.checkedGrocery, tryChance: state.tryChance, weekSize: state.weekSize };
+      const { error } = await supabase.from('app_state').upsert({ id: 1, state_data: payload });
+      if (error) console.error("Failed to sync save with Supabase:", error);
+    }
+
     async function loadState(){
       state.loadError = false;
-      
+      state.loadErrorDetail = null;
+      state.loadErrorCode = null;
       let hashData = null;
       if (window.location.hash) {
         try {
           const parsed = JSON.parse(decodeURIComponent(window.location.hash.slice(1)));
-          if (parsed && Array.isArray(parsed.recipes)) {
-            hashData = parsed;
-          }
-        } catch(e) {
-          console.error("Failed to parse URL hash data", e);
-        }
+          if (parsed && Array.isArray(parsed.recipes)) hashData = parsed;
+        } catch(e) { console.error("Failed to parse URL hash data", e); }
       }
-
       if (hashData) {
         if (confirm("You are opening a shared recipe list. Do you want to import these recipes?")) {
           state.recipes = repairDatabase(hashData.recipes);
@@ -585,77 +211,34 @@
           state.checkedGrocery = hashData.checkedGrocery || {};
           state.tryChance = hashData.tryChance !== undefined ? hashData.tryChance : 0.3;
           state.weekSize = hashData.weekSize || 5;
-          
-          await saveRecipes(); await saveWeek(); await saveChecked(); await saveTryChance(); await saveWeekSize();
+          await syncToSupabase();
           history.replaceState("", document.title, window.location.pathname + window.location.search);
-          state.loaded = true;
-          render();
-          return;
+          state.loaded = true; render(); return;
         }
       }
-
-      let recipesRaw = null;
       try {
-        const r = localDb.get('recipes');
-        recipesRaw = r ? r.value : null;
-      } catch(e) {
+        const { data, error } = await supabase.from('app_state').select('state_data').eq('id', 1).single();
+        if (error) {
+          if (error.code === 'PGRST116') { state.recipes = freshSeed(); await syncToSupabase(); }
+          else throw error;
+        } else if (data && data.state_data) {
+          const d = data.state_data;
+          state.recipes = repairDatabase(d.recipes || []);
+          state.thisWeek = d.thisWeek || [];
+          state.checkedGrocery = d.checkedGrocery || {};
+          state.tryChance = d.tryChance !== undefined ? d.tryChance : 0.3;
+          state.weekSize = d.weekSize || 5;
+        }
+      } catch (err) {
+        console.error("Database loading failed:", err);
         state.loadError = true;
+        state.loadErrorDetail = (err && (err.message || err.error_description || err.hint || err.details)) || JSON.stringify(err) || String(err);
+        state.loadErrorCode = err && err.code ? err.code : null;
       }
-
-      if (recipesRaw) {
-        try {
-          const parsed = JSON.parse(recipesRaw);
-          state.recipes = repairDatabase(parsed);
-        } catch(e) {
-          state.loadError = true;
-        }
-      } else {
-        state.recipes = freshSeed();
-        localDb.set('recipes', JSON.stringify(state.recipes));
-      }
-
-      try {
-        const w = localDb.get('thisWeek');
-        if(w && w.value) state.thisWeek = JSON.parse(w.value);
-      } catch(e) { state.thisWeek = []; }
-
-      try {
-        const c = localDb.get('checkedGrocery');
-        if(c && c.value) state.checkedGrocery = JSON.parse(c.value);
-      } catch(e) { state.checkedGrocery = {}; }
-
-      try {
-        const t = localDb.get('tryChance');
-        if(t && t.value) state.tryChance = JSON.parse(t.value);
-      } catch(e) { }
-
-      try {
-        const ws = localDb.get('weekSize');
-        if(ws && ws.value) state.weekSize = JSON.parse(ws.value);
-      } catch(e) { }
-
-      state.loaded = true;
-      render();
-    }
-
-    async function saveRecipes(){
-      localDb.set('recipes', JSON.stringify(state.recipes));
-    }
-    async function saveWeek(){
-      localDb.set('thisWeek', JSON.stringify(state.thisWeek));
-    }
-    async function saveChecked(){
-      localDb.set('checkedGrocery', JSON.stringify(state.checkedGrocery));
-    }
-    async function saveTryChance(){
-      localDb.set('tryChance', JSON.stringify(state.tryChance));
-    }
-    async function saveWeekSize(){
-      localDb.set('weekSize', JSON.stringify(state.weekSize));
+      state.loaded = true; render();
     }
 
     function esc(s){ return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
     function getRecipe(id){ return state.recipes.find(r => r.id === id); }
 
     function filteredRecipes(){
@@ -664,11 +247,7 @@
       if(state.proteinFilter){ list = list.filter(r => r.protein === state.proteinFilter); }
       if(state.search.trim()){
         const q = state.search.trim().toLowerCase();
-        list = list.filter(r =>
-          (r.name || '').toLowerCase().includes(q) ||
-          (r.cuisine||'').toLowerCase().includes(q) ||
-          (r.ingredients || []).some(i => i.name && i.name.toLowerCase().includes(q))
-        );
+        list = list.filter(r => (r.name || '').toLowerCase().includes(q) || (r.cuisine||'').toLowerCase().includes(q) || (r.ingredients || []).some(i => i.name && i.name.toLowerCase().includes(q)));
       }
       return list.slice().sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
     }
@@ -680,7 +259,8 @@
         root.innerHTML = `
           <div class="dd-header"><div><h1>Dinner Rotation</h1></div></div>
           <div style="padding:16px;background:#FBEAEA;border:1px solid #E3A9A9;border-radius:8px;color:#7A2020;font-size:14px;line-height:1.6;">
-            <strong>Couldn't load your saved data.</strong> Local browser storage is temporarily locked or restricted.
+            <strong>Couldn't load your saved database.</strong> Please check your Supabase credentials or internet connection.
+            ${state.loadErrorDetail ? `<div style="margin-top:8px;font-family:monospace;font-size:12px;background:#fff;border:1px solid #E3A9A9;border-radius:4px;padding:8px;word-break:break-word;">${state.loadErrorCode ? '<strong>code:</strong> ' + esc(state.loadErrorCode) + '<br>' : ''}<strong>message:</strong> ${esc(state.loadErrorDetail)}</div>` : ''}
             <div style="margin-top:10px;"><button class="dd-btn" id="dd-retry-load">Retry</button></div>
           </div>
         `;
@@ -700,36 +280,23 @@
           </div>
         </div>
         <div style="margin:-10px 0 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <div class="dd-shared-note">Data auto-saves locally to your browser instantly. To sync with roommates, copy a share link or export a backup file.</div>
+          <div class="dd-shared-note">Data auto-saves to your Supabase cloud database instantly. To sync with roommates, copy a share link or export a backup file.</div>
           <button class="dd-btn secondary" id="dd-share-link-btn" style="padding:5px 10px;font-size:11.5px;background:#8a6f44;color:white;border:none;">Copy Share Link</button>
           <button class="dd-btn secondary" id="dd-refresh" style="padding:5px 10px;font-size:11.5px;">Refresh</button>
         </div>
         <div id="dd-body"></div>
       `;
-      root.querySelectorAll('.dd-tab').forEach(el => el.addEventListener('click', () => {
-        state.tab = el.dataset.tab; render();
-      }));
-      
+      root.querySelectorAll('.dd-tab').forEach(el => el.addEventListener('click', () => { state.tab = el.dataset.tab; render(); }));
       document.getElementById('dd-share-link-btn').addEventListener('click', () => {
-        const payload = {
-          recipes: state.recipes,
-          thisWeek: state.thisWeek,
-          checkedGrocery: state.checkedGrocery,
-          tryChance: state.tryChance,
-          weekSize: state.weekSize
-        };
+        const payload = { recipes: state.recipes, thisWeek: state.thisWeek, checkedGrocery: state.checkedGrocery, tryChance: state.tryChance, weekSize: state.weekSize };
         const dataStr = encodeURIComponent(JSON.stringify(payload));
         const shareUrl = window.location.origin + window.location.pathname + '#' + dataStr;
-        
         navigator.clipboard.writeText(shareUrl).then(() => {
           const btn = document.getElementById('dd-share-link-btn');
           btn.textContent = 'Link Copied!';
           setTimeout(() => { btn.textContent = 'Copy Share Link'; }, 2000);
-        }).catch(() => {
-          alert("Could not copy automatically. Here is your share link: \n\n" + shareUrl);
-        });
+        }).catch(() => { alert("Could not copy automatically. Here is your share link: \n\n" + shareUrl); });
       });
-
       const refreshBtn = document.getElementById('dd-refresh');
       if(refreshBtn) refreshBtn.addEventListener('click', () => { state.loaded = false; render(); loadState(); });
       const body = document.getElementById('dd-body');
@@ -764,35 +331,16 @@
         </div>
       `;
       document.getElementById('dd-search-input').addEventListener('input', e => { state.search = e.target.value; renderRecipes(body); });
-      body.querySelectorAll('[data-protein]').forEach(el => el.addEventListener('click', () => {
-        const p = el.dataset.protein;
-        state.proteinFilter = state.proteinFilter === p ? null : p;
-        renderRecipes(body);
-      }));
-      body.querySelectorAll('[data-bucket]').forEach(el => el.addEventListener('click', () => {
-        const b = el.dataset.bucket;
-        state.bucketFilter = b === 'all' ? null : b;
-        renderRecipes(body);
-      }));
+      body.querySelectorAll('[data-protein]').forEach(el => el.addEventListener('click', () => { const p = el.dataset.protein; state.proteinFilter = state.proteinFilter === p ? null : p; renderRecipes(body); }));
+      body.querySelectorAll('[data-bucket]').forEach(el => el.addEventListener('click', () => { const b = el.dataset.bucket; state.bucketFilter = b === 'all' ? null : b; renderRecipes(body); }));
       document.getElementById('dd-add-recipe').addEventListener('click', () => openRecipeModal(null));
       document.getElementById('dd-backup').addEventListener('click', () => {
-        const backup = {
-          exportedAt: new Date().toISOString(),
-          recipes: state.recipes,
-          thisWeek: state.thisWeek,
-          checkedGrocery: state.checkedGrocery,
-          tryChance: state.tryChance,
-          weekSize: state.weekSize
-        };
+        const backup = { exportedAt: new Date().toISOString(), recipes: state.recipes, thisWeek: state.thisWeek, checkedGrocery: state.checkedGrocery, tryChance: state.tryChance, weekSize: state.weekSize };
         const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `dinner-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = `dinner-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       });
       const restoreFileInput = document.getElementById('dd-restore-file');
       document.getElementById('dd-restore-btn').addEventListener('click', () => restoreFileInput.click());
@@ -804,31 +352,22 @@
           try{
             const backup = JSON.parse(ev.target.result);
             if(!Array.isArray(backup.recipes)) throw new Error('Not a valid backup file');
-            if(!confirm(`This backup has ${backup.recipes.length} recipes. This will REPLACE everything currently in your browser. Continue?`)) return;
+            if(!confirm(`This backup has ${backup.recipes.length} recipes. This will REPLACE everything currently saved. Continue?`)) return;
             state.recipes = repairDatabase(backup.recipes);
             state.thisWeek = backup.thisWeek || [];
             state.checkedGrocery = backup.checkedGrocery || {};
             state.tryChance = backup.tryChance !== undefined ? backup.tryChance : 0.3;
             state.weekSize = backup.weekSize || 5;
-            await saveRecipes(); await saveWeek(); await saveChecked(); await saveTryChance(); await saveWeekSize();
+            await syncToSupabase();
             alert('Restored! Refreshing…');
             render();
-          }catch(err){
-            alert('Could not read that file as a valid backup: ' + err.message);
-          }
+          }catch(err){ alert('Could not read that file as a valid backup: ' + err.message); }
         };
         reader.readAsText(file);
         restoreFileInput.value = '';
       });
-      body.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', (ev) => {
-        if(ev.target.closest('.dd-check')) return;
-        openRecipeModal(el.dataset.id);
-      }));
-      body.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        toggleWeek(el.dataset.id);
-        renderRecipes(body);
-      }));
+      body.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', (ev) => { if(ev.target.closest('.dd-check')) return; openRecipeModal(el.dataset.id); }));
+      body.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', async (ev) => { ev.stopPropagation(); toggleWeek(el.dataset.id); renderRecipes(body); }));
     }
 
     function recipeCardHtml(r){
@@ -854,24 +393,18 @@
       `;
     }
 
-    function toggleWeek(id){
-      if(state.thisWeek.includes(id)){
-        state.thisWeek = state.thisWeek.filter(x=>x!==id);
-      } else {
-        if(state.thisWeek.length >= state.weekSize){
-          alert(`You've already got ${state.weekSize} recipe${state.weekSize===1?'':'s'} planned for this week. Remove one first, or adjust the week size in the This Week tab.`);
-          return;
-        }
+    async function toggleWeek(id){
+      if(state.thisWeek.includes(id)){ state.thisWeek = state.thisWeek.filter(x=>x!==id); }
+      else {
+        if(state.thisWeek.length >= state.weekSize){ alert(`You've already got ${state.weekSize} recipe${state.weekSize===1?'':'s'} planned for this week. Remove one first, or adjust the week size in the This Week tab.`); return; }
         state.thisWeek.push(id);
       }
-      saveWeek();
+      await syncToSupabase();
     }
 
     function openRecipeModal(id){
       const existing = id ? getRecipe(id) : null;
-      const draft = existing ? JSON.parse(JSON.stringify(existing)) : {
-        id: uid(), name:'', protein:'Chicken', cuisine:'', servings:4, bucket:'rotation', ingredients:[], notes:'', surpriseEligible:true, timeMinutes:null
-      };
+      const draft = existing ? JSON.parse(JSON.stringify(existing)) : { id: uid(), name:'', protein:'Chicken', cuisine:'', servings:4, bucket:'rotation', ingredients:[], notes:'', surpriseEligible:true, timeMinutes:null };
       if(!draft.bucket) draft.bucket = 'rotation';
       if(draft.surpriseEligible === undefined) draft.surpriseEligible = true;
       if(!draft.ingredients) draft.ingredients = [];
@@ -936,54 +469,37 @@
             <button class="dd-btn danger" data-remove="${idx}" title="remove">✕</button>
           </div>
         `).join('');
-        wrap.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => {
-          const idx = +el.closest('.dd-ingr-row').dataset.idx;
-          const field = el.dataset.field;
-          draft.ingredients[idx][field] = el.value;
-        }));
-        wrap.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => {
-          draft.ingredients.splice(+el.dataset.remove, 1);
-          renderIngrRows();
-        }));
+        wrap.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => { const idx = +el.closest('.dd-ingr-row').dataset.idx; const field = el.dataset.field; draft.ingredients[idx][field] = el.value; }));
+        wrap.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => { draft.ingredients.splice(+el.dataset.remove, 1); renderIngrRows(); }));
       }
       renderIngrRows();
 
-      back.querySelector('#f-add-ingr').addEventListener('click', () => {
-        draft.ingredients.push({name:'',amount:'',unit:'count',category:'Produce'});
-        renderIngrRows();
-      });
+      back.querySelector('#f-add-ingr').addEventListener('click', () => { draft.ingredients.push({name:'',amount:'',unit:'count',category:'Produce'}); renderIngrRows(); });
       back.querySelector('.dd-close').addEventListener('click', () => back.remove());
       back.querySelector('#f-cancel').addEventListener('click', () => back.remove());
       back.addEventListener('click', (e) => { if(e.target === back) back.remove(); });
-      back.querySelector('#f-bucket').addEventListener('change', (e) => {
-        back.querySelector('#f-surprise-wrap').style.display = e.target.value === 'tryList' ? 'block' : 'none';
-      });
+      back.querySelector('#f-bucket').addEventListener('change', (e) => { back.querySelector('#f-surprise-wrap').style.display = e.target.value === 'tryList' ? 'block' : 'none'; });
 
       if(existing){
-        back.querySelector('#f-delete').addEventListener('click', () => {
+        back.querySelector('#f-delete').addEventListener('click', async () => {
           if(confirm(`Delete "${existing.name}"? This can't be undone.`)){
             state.recipes = state.recipes.filter(r => r.id !== existing.id);
             state.thisWeek = state.thisWeek.filter(id2 => id2 !== existing.id);
-            saveRecipes(); saveWeek();
-            back.remove();
-            render();
+            await syncToSupabase();
+            back.remove(); render();
           }
         });
         const markTriedBtn = back.querySelector('#f-mark-tried');
         if(markTriedBtn){
-          markTriedBtn.addEventListener('click', () => {
+          markTriedBtn.addEventListener('click', async () => {
             const idx = state.recipes.findIndex(r => r.id === existing.id);
-            if(idx > -1){
-              state.recipes[idx].bucket = 'rotation';
-              saveRecipes();
-            }
-            back.remove();
-            render();
+            if(idx > -1){ state.recipes[idx].bucket = 'rotation'; await syncToSupabase(); }
+            back.remove(); render();
           });
         }
       }
 
-      back.querySelector('#f-save').addEventListener('click', () => {
+      back.querySelector('#f-save').addEventListener('click', async () => {
         const name = back.querySelector('#f-name').value.trim();
         if(!name){ alert('Give the recipe a name first.'); return; }
         draft.name = name;
@@ -995,29 +511,16 @@
         const timeVal = back.querySelector('#f-time').value;
         draft.timeMinutes = timeVal ? +timeVal : null;
         draft.notes = back.querySelector('#f-notes').value.trim();
-        draft.ingredients = (draft.ingredients || [])
-          .filter(i => i.name && i.name.trim())
-          .map(i => ({ 
-            name: i.name.trim().toLowerCase(), 
-            amount: i.amount ? String(i.amount).trim() : '', 
-            unit: i.unit, 
-            category: i.category 
-          }));
-
-        if(existing){
-          const idx = state.recipes.findIndex(r=>r.id===existing.id);
-          state.recipes[idx] = draft;
-        } else {
-          state.recipes.push(draft);
-        }
-        saveRecipes();
-        back.remove();
-        render();
+        draft.ingredients = (draft.ingredients || []).filter(i => i.name && i.name.trim()).map(i => ({ name: i.name.trim().toLowerCase(), amount: i.amount ? String(i.amount).trim() : '', unit: i.unit, category: i.category }));
+        if(existing){ const idx = state.recipes.findIndex(r=>r.id===existing.id); state.recipes[idx] = draft; }
+        else { state.recipes.push(draft); }
+        await syncToSupabase();
+        back.remove(); render();
       });
     }
 
     function findSharedIngredients(recipeIds){
-      const map = {}; 
+      const map = {};
       recipeIds.forEach(id => {
         const r = getRecipe(id);
         if(!r) return;
@@ -1028,11 +531,7 @@
           map[name].push({recipeId: id, recipeName: r.name, amount: ing.amount, unit: ing.unit});
         });
       });
-      const shared = Object.entries(map).filter(([name, uses]) => {
-        const distinctRecipes = new Set(uses.map(u=>u.recipeId));
-        return distinctRecipes.size > 1;
-      });
-      return shared;
+      return Object.entries(map).filter(([name, uses]) => { const distinctRecipes = new Set(uses.map(u=>u.recipeId)); return distinctRecipes.size > 1; });
     }
 
     function parseFraction(str) {
@@ -1041,11 +540,8 @@
       if (str.includes('/')) {
         const parts = str.split('/');
         if (parts.length === 2) {
-          const num = parseFloat(parts[0]);
-          const den = parseFloat(parts[1]);
-          if (!isNaN(num) && !isNaN(den) && den !== 0) {
-            return num / den;
-          }
+          const num = parseFloat(parts[0]); const den = parseFloat(parts[1]);
+          if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
         }
       }
       const parsed = parseFloat(str);
@@ -1068,61 +564,25 @@
       const pool = state.recipes.filter(r => (r.bucket||'rotation') === 'rotation');
       const tryPool = state.recipes.filter(r => r.bucket === 'tryList' && r.surpriseEligible !== false);
       if(pool.length === 0 && tryPool.length === 0) return [];
-      
       const ingrMap = {};
-      pool.forEach(r => (r.ingredients || []).forEach(i => {
-        if(i && i.category === 'Meat' && i.name){
-          ingrMap[i.name] = ingrMap[i.name] || new Set();
-          ingrMap[i.name].add(r.id);
-        }
-      }));
-      
+      pool.forEach(r => (r.ingredients || []).forEach(i => { if(i && i.category === 'Meat' && i.name){ ingrMap[i.name] = ingrMap[i.name] || new Set(); ingrMap[i.name].add(r.id); } }));
       let pairIds = null;
       const candidates = Object.entries(ingrMap).filter(([name, set]) => set.size > 1);
-      if(candidates.length){
-        const [name, set] = candidates[Math.floor(Math.random()*candidates.length)];
-        pairIds = Array.from(set).slice(0,2);
-      }
-      
+      if(candidates.length){ const [name, set] = candidates[Math.floor(Math.random()*candidates.length)]; pairIds = Array.from(set).slice(0,2); }
       let picked = [];
       if(pairIds) picked = pairIds.slice();
       const shuffled = pool.slice().sort(()=>Math.random()-0.5);
       const usedProteins = {};
-      
-      picked.forEach(id => { 
-        const r = getRecipe(id); 
-        if(r) usedProteins[r.protein] = (usedProteins[r.protein]||0)+1; 
-      });
-
-      for(const r of shuffled){
-        if(picked.length >= state.weekSize) break;
-        if(picked.includes(r.id)) continue;
-        const count = usedProteins[r.protein] || 0;
-        if(count >= 2) continue; 
-        picked.push(r.id);
-        usedProteins[r.protein] = count + 1;
-      }
-      for(const r of shuffled){
-        if(picked.length >= state.weekSize) break;
-        if(!picked.includes(r.id)) picked.push(r.id);
-      }
+      picked.forEach(id => { const r = getRecipe(id); if(r) usedProteins[r.protein] = (usedProteins[r.protein]||0)+1; });
+      for(const r of shuffled){ if(picked.length >= state.weekSize) break; if(picked.includes(r.id)) continue; const count = usedProteins[r.protein] || 0; if(count >= 2) continue; picked.push(r.id); usedProteins[r.protein] = count + 1; }
+      for(const r of shuffled){ if(picked.length >= state.weekSize) break; if(!picked.includes(r.id)) picked.push(r.id); }
       picked = picked.slice(0, state.weekSize);
-
-      if(tryPool.length && Math.random() < state.tryChance && picked.length > 0){
-        const pickIdx = Math.floor(Math.random()*picked.length);
-        const tryPick = tryPool[Math.floor(Math.random()*tryPool.length)];
-        picked[pickIdx] = tryPick.id;
-      }
+      if(tryPool.length && Math.random() < state.tryChance && picked.length > 0){ const pickIdx = Math.floor(Math.random()*picked.length); const tryPick = tryPool[Math.floor(Math.random()*tryPool.length)]; picked[pickIdx] = tryPick.id; }
       return picked;
     }
 
     function guidedSuggestWeek(proteinCounts, maxTime){
-      const pool = state.recipes.filter(r => {
-        const bucketOk = (r.bucket||'rotation') === 'rotation' || (r.bucket === 'tryList' && r.surpriseEligible !== false);
-        if(!bucketOk) return false;
-        if(maxTime && (!r.timeMinutes || r.timeMinutes > maxTime)) return false;
-        return true;
-      });
+      const pool = state.recipes.filter(r => { const bucketOk = (r.bucket||'rotation') === 'rotation' || (r.bucket === 'tryList' && r.surpriseEligible !== false); if(!bucketOk) return false; if(maxTime && (!r.timeMinutes || r.timeMinutes > maxTime)) return false; return true; });
       let picked = [];
       const usedIds = new Set();
       const shortfalls = [];
@@ -1134,10 +594,7 @@
         if(take.length < count) shortfalls.push({protein, count, found: take.length});
       });
       const remaining = pool.filter(r => !usedIds.has(r.id)).sort(()=>Math.random()-0.5);
-      for(const r of remaining){
-        if(picked.length >= state.weekSize) break;
-        picked.push(r.id); usedIds.add(r.id);
-      }
+      for(const r of remaining){ if(picked.length >= state.weekSize) break; picked.push(r.id); usedIds.add(r.id); }
       return { picked: picked.slice(0, state.weekSize), shortfalls };
     }
 
@@ -1173,7 +630,6 @@
         <h3 style="margin-top: 32px; border-top: 1px solid var(--line); padding-top: 24px;">Your Recipe Box</h3>
         <div id="dd-inline-recipes"></div>
       `;
-      
       const slotsEl = document.getElementById('dd-slots');
       slotsEl.innerHTML = Array.from({length:state.weekSize}).map((_, i) => {
         const id = state.thisWeek[i];
@@ -1193,48 +649,22 @@
           </div>
         `;
       }).join('');
-      
-      slotsEl.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => {
-        state.thisWeek = state.thisWeek.filter(x=>x!==el.dataset.remove);
-        saveWeek(); renderWeek(body);
-      }));
-      slotsEl.querySelectorAll('[data-swap]').forEach(el => el.addEventListener('click', () => {
-        const currentId = el.dataset.swap;
-        openSwapPicker(currentId, body);
-      }));
-      document.getElementById('dd-suggest').addEventListener('click', () => {
-        state.thisWeek = suggestWeek();
-        saveWeek(); renderWeek(body);
-      });
-      document.getElementById('dd-guided').addEventListener('click', () => {
-        openGuidedModal(body);
-      });
-      document.getElementById('dd-try-chance').addEventListener('change', (e) => {
-        state.tryChance = parseFloat(e.target.value);
-        saveTryChance();
-      });
-      document.getElementById('dd-week-size').addEventListener('change', (e) => {
+      slotsEl.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async () => { state.thisWeek = state.thisWeek.filter(x=>x!==el.dataset.remove); await syncToSupabase(); renderWeek(body); }));
+      slotsEl.querySelectorAll('[data-swap]').forEach(el => el.addEventListener('click', () => { openSwapPicker(el.dataset.swap, body); }));
+      document.getElementById('dd-suggest').addEventListener('click', async () => { state.thisWeek = suggestWeek(); await syncToSupabase(); renderWeek(body); });
+      document.getElementById('dd-guided').addEventListener('click', () => { openGuidedModal(body); });
+      document.getElementById('dd-try-chance').addEventListener('change', async (e) => { state.tryChance = parseFloat(e.target.value); await syncToSupabase(); });
+      document.getElementById('dd-week-size').addEventListener('change', async (e) => {
         let val = parseInt(e.target.value) || 5;
         val = Math.max(1, Math.min(10, val));
         e.target.value = val;
         state.weekSize = val;
-        if(state.thisWeek.length > val){
-          state.thisWeek = state.thisWeek.slice(0, val);
-          saveWeek();
-        }
-        saveWeekSize();
-        renderWeek(body);
+        if(state.thisWeek.length > val) state.thisWeek = state.thisWeek.slice(0, val);
+        await syncToSupabase(); renderWeek(body);
       });
-      document.getElementById('dd-clear-week').addEventListener('click', () => {
-        if(confirm(`Clear all ${state.weekSize} slots for this week?`)){
-          state.thisWeek = []; saveWeek(); renderWeek(body);
-        }
-      });
-
+      document.getElementById('dd-clear-week').addEventListener('click', async () => { if(confirm(`Clear all ${state.weekSize} slots for this week?`)){ state.thisWeek = []; await syncToSupabase(); renderWeek(body); } });
       const inlineWrap = document.getElementById('dd-inline-recipes');
-      if(inlineWrap) {
-        renderRecipes(inlineWrap);
-      }
+      if(inlineWrap) renderRecipes(inlineWrap);
     }
 
     function openGuidedModal(weekBody){
@@ -1246,12 +676,7 @@
           <h2>Guided suggestions</h2>
           <div class="dd-help" style="margin-bottom:14px;">Set how many of each protein you want (up to ${state.weekSize} total). Leave any at 0 to skip — remaining slots fill in on their own.</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-            ${PROTEINS.map(p => `
-              <div class="dd-field" style="margin-bottom:0;">
-                <label>${esc(p)}</label>
-                <input type="number" min="0" max="${state.weekSize}" value="0" data-protein="${esc(p)}"/>
-              </div>
-            `).join('')}
+            ${PROTEINS.map(p => `<div class="dd-field" style="margin-bottom:0;"><label>${esc(p)}</label><input type="number" min="0" max="${state.weekSize}" value="0" data-protein="${esc(p)}"/></div>`).join('')}
           </div>
           <div class="dd-field">
             <label>Max time per recipe</label>
@@ -1272,27 +697,18 @@
       back.querySelector('.dd-close').addEventListener('click', () => back.remove());
       back.querySelector('#g-cancel').addEventListener('click', () => back.remove());
       back.addEventListener('click', (e) => { if(e.target === back) back.remove(); });
-      back.querySelector('#g-generate').addEventListener('click', () => {
-        const proteinCounts = {};
-        let total = 0;
-        back.querySelectorAll('[data-protein]').forEach(el => {
-          const v = parseInt(el.value) || 0;
-          if(v > 0){ proteinCounts[el.dataset.protein] = v; total += v; }
-        });
-        if(total > state.weekSize){
-          alert(`That adds up to more than ${state.weekSize} recipes, and the week only has ${state.weekSize} slots. Lower a few counts and try again.`);
-          return;
-        }
+      back.querySelector('#g-generate').addEventListener('click', async () => {
+        const proteinCounts = {}; let total = 0;
+        back.querySelectorAll('[data-protein]').forEach(el => { const v = parseInt(el.value) || 0; if(v > 0){ proteinCounts[el.dataset.protein] = v; total += v; } });
+        if(total > state.weekSize){ alert(`That adds up to more than ${state.weekSize} recipes, and the week only has ${state.weekSize} slots. Lower a few counts and try again.`); return; }
         const maxTimeVal = back.querySelector('#g-time').value;
         const maxTime = maxTimeVal ? +maxTimeVal : null;
         const result = guidedSuggestWeek(proteinCounts, maxTime);
         state.thisWeek = result.picked;
-        saveWeek();
+        await syncToSupabase();
         back.remove();
         renderWeek(weekBody);
-        if(result.shortfalls.length){
-          alert("Couldn't fully fill your request: " + result.shortfalls.map(s => `${s.protein} — wanted ${s.count}, only found ${s.found} that fit`).join('; '));
-        }
+        if(result.shortfalls.length){ alert("Couldn't fully fill your request: " + result.shortfalls.map(s => `${s.protein} — wanted ${s.count}, only found ${s.found} that fit`).join('; ')); }
       });
     }
 
@@ -1312,17 +728,17 @@
       document.body.appendChild(back);
       back.querySelector('.dd-close').addEventListener('click', () => back.remove());
       back.addEventListener('click', (e) => { if(e.target === back) back.remove(); });
-      back.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', () => {
+      back.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', async () => {
         const idx = state.thisWeek.indexOf(currentId);
         if(idx > -1) state.thisWeek[idx] = el.dataset.id;
-        saveWeek();
+        await syncToSupabase();
         back.remove();
         renderWeek(weekBody);
       }));
     }
 
     function buildGroceryList(){
-      const groups = {}; 
+      const groups = {};
       state.thisWeek.forEach(id => {
         const r = getRecipe(id);
         if(!r) return;
@@ -1375,15 +791,8 @@
           </div>
         `).join('')}
       `;
-      body.querySelectorAll('.dd-glist-check').forEach(el => el.addEventListener('click', () => {
-        const key = el.dataset.key;
-        state.checkedGrocery[key] = !state.checkedGrocery[key];
-        saveChecked();
-        renderGrocery(body);
-      }));
-      document.getElementById('dd-reset-check').addEventListener('click', () => {
-        state.checkedGrocery = {}; saveChecked(); renderGrocery(body);
-      });
+      body.querySelectorAll('.dd-glist-check').forEach(el => el.addEventListener('click', async () => { const key = el.dataset.key; state.checkedGrocery[key] = !state.checkedGrocery[key]; await syncToSupabase(); renderGrocery(body); }));
+      document.getElementById('dd-reset-check').addEventListener('click', async () => { state.checkedGrocery = {}; await syncToSupabase(); renderGrocery(body); });
       document.getElementById('dd-copy').addEventListener('click', () => {
         let text = "Grocery List — " + state.thisWeek.map(id=>getRecipe(id)?.name).join(', ') + "\n\n";
         catOrder.forEach(cat => {
