@@ -1,0 +1,922 @@
+<script>
+(function(){
+  const CATS = ["Produce","Meat","Dairy & Eggs","Grains & Bread","Pantry & Canned","Spices & Condiments","Frozen","Other"];
+  const PROTEINS = ["Chicken","Beef","Pork","Turkey","Vegetarian","Other"];
+  const UNITS = ["lb","oz","g","kg","cup","tbsp","tsp","count","can","jar","package","other"];
+  const TRY_CHANCE_OPTIONS = [
+    {value:0, label:"Stick to the rotation"},
+    {value:0.3, label:"Sometimes surprise us"},
+    {value:0.6, label:"Lean into trying new things"}
+  ];
+
+  let state = {
+    recipes: [],
+    thisWeek: [], // array of recipe ids
+    tab: 'recipes',
+    search: '',
+    proteinFilter: null,
+    bucketFilter: null, // 'rotation' | 'tryList' | null (all)
+    checkedGrocery: {}, // key -> bool
+    tryChance: 0.3,
+    weekSize: 5,
+    loadError: false,
+    loaded: false
+  };
+
+  const SEED = [
+    // ---- Pasta ----
+    {name:"Red Sauce", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Pasta e Fagioli", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Fettuccine Alfredo", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Fresh Pesto Pasta", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Mac and Cheese", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Cacio e Pepe", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Lasagna", protein:"Beef", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Baked Ziti", protein:"Beef", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Italian Sausage Pasta", protein:"Pork", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Spaghetti and Meatballs", protein:"Beef", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Stanley Tucci Pasta", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    // ---- Mexican ----
+    {name:"Chicken Tacos", protein:"Chicken", cuisine:"Mexican", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Pork Tacos", protein:"Pork", cuisine:"Mexican", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Enchiladas", protein:"Chicken", cuisine:"Mexican", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    // ---- Curry ----
+    {name:"Chicken Tikka Masala", protein:"Chicken", cuisine:"Indian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    // ---- Comfort Food ----
+    {name:"Beef Stew", protein:"Beef", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chili", protein:"Beef", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Swedish Meatballs", protein:"Beef", cuisine:"Swedish", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Pork Tenderloin with Potatoes & Veggie", protein:"Pork", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Meatloaf", protein:"Beef", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken Parmesan", protein:"Chicken", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Pizza Night", protein:"Other", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:"Always exactly 3 — no leftovers."},
+    {name:"Chicken Pot Pie", protein:"Chicken", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken Cacciatore", protein:"Chicken", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken and Dumplings", protein:"Chicken", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken Piccata", protein:"Chicken", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken Marsala", protein:"Chicken", cuisine:"Italian", servings:3, bucket:"rotation", notes:""},
+    // ---- Rice / Bowls ----
+    {name:"Chicken Paprikash", protein:"Chicken", cuisine:"Hungarian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Goulash", protein:"Beef", cuisine:"Hungarian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Honey Sriracha Chicken", protein:"Chicken", cuisine:"Asian-inspired", servings:3, bucket:"rotation", ingredients:[], notes:"Always exactly 3 — no leftovers."},
+    // ---- Sandwiches & Grill ----
+    {name:"Pulled Pork Sandwiches", protein:"Pork", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Italian Sausage Sandwiches", protein:"Pork", cuisine:"Italian", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Sloppy Joes", protein:"Beef", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Grilled Cheese & Tomato Soup", protein:"Vegetarian", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Hot Dogs", protein:"Other", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Hamburgers", protein:"Beef", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken (Grilled) w/ Various Seasonings", protein:"Chicken", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Bratwurst and Sauerkraut", protein:"Pork", cuisine:"German", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Gyros", protein:"Other", cuisine:"Greek", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    // ---- Soup Night ----
+    {name:"Minestrone Soup", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Escarole Soup", protein:"Vegetarian", cuisine:"Italian", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"Chicken Noodle Soup", protein:"Chicken", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    {name:"French Onion Soup", protein:"Vegetarian", cuisine:"French", servings:6, bucket:"rotation", ingredients:[], notes:""},
+    // ---- Lighter Nights ----
+    {name:"Salad Night", protein:"Vegetarian", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
+    // ---- Want to Try ----
+    {name:"Chicken Teriyaki Bowls", protein:"Chicken", cuisine:"Japanese", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Korean-Inspired Beef Bowls", protein:"Beef", cuisine:"Korean", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Meatball Subs", protein:"Beef", cuisine:"Italian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Cuban Mojo Pork", protein:"Pork", cuisine:"Cuban", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Thai Curry (Red or Green)", protein:"Chicken", cuisine:"Thai", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Coq au Vin", protein:"Chicken", cuisine:"French", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Beef Bourguignon", protein:"Beef", cuisine:"French", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Picadillo", protein:"Beef", cuisine:"Cuban", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Butter Chicken", protein:"Chicken", cuisine:"Indian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"French Dip Sandwiches", protein:"Beef", cuisine:"American", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Calzones", protein:"Other", cuisine:"Italian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Chicken Cordon Bleu", protein:"Chicken", cuisine:"French", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
+    {name:"Cottage Pie (Shepherd's Pie with Beef)", protein:"Beef", cuisine:"British", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""}
+  ];
+
+  function uid(){ return 'r' + Math.random().toString(36).slice(2,10); }
+
+  function freshSeed(){
+    return SEED.map(r => ({
+      ...r,
+      id: uid(),
+      bucket: r.bucket || 'rotation',
+      surpriseEligible: r.surpriseEligible !== undefined ? r.surpriseEligible : true,
+      timeMinutes: r.timeMinutes || null
+    }));
+  }
+
+  // Safe fallback localStorage handler
+  const localDb = {
+    get(key) {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? { value: val } : null;
+      } catch(e) {
+        console.error("Local storage read failed", e);
+        return null;
+      }
+    },
+    set(key, val) {
+      try {
+        localStorage.setItem(key, val);
+      } catch(e) {
+        console.error("Local storage write failed", e);
+      }
+    }
+  };
+
+  async function loadState(){
+    state.loadError = false;
+    
+    // 1. Check if an incoming share-state is present in the URL hash
+    let hashData = null;
+    if (window.location.hash) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(window.location.hash.slice(1)));
+        if (parsed && Array.isArray(parsed.recipes)) {
+          hashData = parsed;
+        }
+      } catch(e) {
+        console.error("Failed to parse URL hash data", e);
+      }
+    }
+
+    if (hashData) {
+      if (confirm("You are opening a shared recipe list. Do you want to import these recipes? (This will update your dashboard with the shared list)")) {
+        state.recipes = hashData.recipes;
+        state.thisWeek = hashData.thisWeek || [];
+        state.checkedGrocery = hashData.checkedGrocery || {};
+        state.tryChance = hashData.tryChance !== undefined ? hashData.tryChance : 0.3;
+        state.weekSize = hashData.weekSize || 5;
+        
+        await saveRecipes(); await saveWeek(); await saveChecked(); await saveTryChance(); await saveWeekSize();
+        // Clear the hash so refreshes behave normally
+        history.replaceState("", document.title, window.location.pathname + window.location.search);
+        state.loaded = true;
+        render();
+        return;
+      }
+    }
+
+    // 2. Standard LocalStorage loading
+    let recipesRaw = null;
+    try {
+      const r = localDb.get('recipes');
+      recipesRaw = r ? r.value : null;
+    } catch(e) {
+      state.loadError = true;
+    }
+
+    if (recipesRaw) {
+      try {
+        state.recipes = JSON.parse(recipesRaw);
+      } catch(e) {
+        state.loadError = true;
+      }
+    } else {
+      state.recipes = freshSeed();
+      localDb.set('recipes', JSON.stringify(state.recipes));
+    }
+
+    try {
+      const w = localDb.get('thisWeek');
+      if(w && w.value) state.thisWeek = JSON.parse(w.value);
+    } catch(e) { state.thisWeek = []; }
+
+    try {
+      const c = localDb.get('checkedGrocery');
+      if(c && c.value) state.checkedGrocery = JSON.parse(c.value);
+    } catch(e) { state.checkedGrocery = {}; }
+
+    try {
+      const t = localDb.get('tryChance');
+      if(t && t.value) state.tryChance = JSON.parse(t.value);
+    } catch(e) { }
+
+    try {
+      const ws = localDb.get('weekSize');
+      if(ws && ws.value) state.weekSize = JSON.parse(ws.value);
+    } catch(e) { }
+
+    state.loaded = true;
+    render();
+  }
+
+  async function saveRecipes(){
+    localDb.set('recipes', JSON.stringify(state.recipes));
+  }
+  async function saveWeek(){
+    localDb.set('thisWeek', JSON.stringify(state.thisWeek));
+  }
+  async function saveChecked(){
+    localDb.set('checkedGrocery', JSON.stringify(state.checkedGrocery));
+  }
+  async function saveTryChance(){
+    localDb.set('tryChance', JSON.stringify(state.tryChance));
+  }
+  async function saveWeekSize(){
+    localDb.set('weekSize', JSON.stringify(state.weekSize));
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function getRecipe(id){ return state.recipes.find(r => r.id === id); }
+
+  function filteredRecipes(){
+    let list = state.recipes;
+    if(state.bucketFilter){ list = list.filter(r => (r.bucket||'rotation') === state.bucketFilter); }
+    if(state.proteinFilter){ list = list.filter(r => r.protein === state.proteinFilter); }
+    if(state.search.trim()){
+      const q = state.search.trim().toLowerCase();
+      list = list.filter(r =>
+        r.name.toLowerCase().includes(q) ||
+        (r.cuisine||'').toLowerCase().includes(q) ||
+        r.ingredients.some(i => i.name.toLowerCase().includes(q))
+      );
+    }
+    return list.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  }
+
+  // ---------- Rendering ----------
+  function render(){
+    const root = document.getElementById('dd-root');
+    if(!state.loaded){ root.innerHTML = '<div class="dd-empty">Loading your recipe box…</div>'; return; }
+    if(state.loadError){
+      root.innerHTML = `
+        <div class="dd-header"><div><h1>Dinner Rotation</h1></div></div>
+        <div style="padding:16px;background:#FBEAEA;border:1px solid #E3A9A9;border-radius:8px;color:#7A2020;font-size:14px;line-height:1.6;">
+          <strong>Couldn't load your saved data.</strong> Local browser storage is temporarily locked or restricted.
+          <div style="margin-top:10px;"><button class="dd-btn" id="dd-retry-load">Retry</button></div>
+        </div>
+      `;
+      document.getElementById('dd-retry-load').addEventListener('click', () => { state.loaded = false; render(); loadState(); });
+      return;
+    }
+    root.innerHTML = `
+      <div class="dd-header">
+        <div>
+          <h1>Dinner Rotation</h1>
+          <div class="sub">${state.recipes.filter(r=>(r.bucket||'rotation')==='rotation').length} in rotation · ${state.recipes.filter(r=>r.bucket==='tryList').length} want to try · ${state.thisWeek.length} planned this week</div>
+        </div>
+        <div class="dd-tabs">
+          <div class="dd-tab ${state.tab==='recipes'?'active':''}" data-tab="recipes">Recipe Box</div>
+          <div class="dd-tab ${state.tab==='week'?'active':''}" data-tab="week">This Week</div>
+          <div class="dd-tab ${state.tab==='grocery'?'active':''}" data-tab="grocery">Grocery List</div>
+        </div>
+      </div>
+      <div style="margin:-10px 0 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="dd-shared-note">Data auto-saves locally to your browser instantly. To sync with roommates, copy a share link or export a backup file.</div>
+        <button class="dd-btn secondary" id="dd-share-link-btn" style="padding:5px 10px;font-size:11.5px;background:var(--mustard);color:white;border:none;">Copy Share Link</button>
+        <button class="dd-btn secondary" id="dd-refresh" style="padding:5px 10px;font-size:11.5px;">Refresh</button>
+      </div>
+      <div id="dd-body"></div>
+    `;
+    root.querySelectorAll('.dd-tab').forEach(el => el.addEventListener('click', () => {
+      state.tab = el.dataset.tab; render();
+    }));
+    
+    document.getElementById('dd-share-link-btn').addEventListener('click', () => {
+      const payload = {
+        recipes: state.recipes,
+        thisWeek: state.thisWeek,
+        checkedGrocery: state.checkedGrocery,
+        tryChance: state.tryChance,
+        weekSize: state.weekSize
+      };
+      const dataStr = encodeURIComponent(JSON.stringify(payload));
+      const shareUrl = window.location.origin + window.location.pathname + '#' + dataStr;
+      
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const btn = document.getElementById('dd-share-link-btn');
+        btn.textContent = 'Link Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Share Link'; }, 2000);
+      }).catch(() => {
+        alert("Could not copy automatically. Here is your share link: \n\n" + shareUrl);
+      });
+    });
+
+    const refreshBtn = document.getElementById('dd-refresh');
+    if(refreshBtn) refreshBtn.addEventListener('click', () => { state.loaded = false; render(); loadState(); });
+    const body = document.getElementById('dd-body');
+    if(state.tab === 'recipes') renderRecipes(body);
+    else if(state.tab === 'week') renderWeek(body);
+    else renderGrocery(body);
+  }
+
+  function renderRecipes(body){
+    const list = filteredRecipes();
+    body.innerHTML = `
+      <div class="dd-toolbar">
+        <input class="dd-search" id="dd-search-input" placeholder="Search by name, ingredient, or cuisine…" value="${esc(state.search)}"/>
+        <button class="dd-btn" id="dd-add-recipe">+ Add recipe</button>
+        <button class="dd-btn secondary" id="dd-backup">⬇ Download backup</button>
+        <button class="dd-btn secondary" id="dd-restore-btn">⬆ Restore from backup</button>
+        <input type="file" id="dd-restore-file" accept="application/json" style="display:none;"/>
+      </div>
+      <div class="dd-toolbar">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="dd-chip ${state.bucketFilter===null?'on':''}" data-bucket="all">All</div>
+          <div class="dd-chip ${state.bucketFilter==='rotation'?'on':''}" data-bucket="rotation">Rotation</div>
+          <div class="dd-chip ${state.bucketFilter==='tryList'?'on':''}" data-bucket="tryList">Want to try</div>
+        </div>
+        <div style="width:1px;background:var(--line);align-self:stretch;"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${PROTEINS.map(p => `<div class="dd-chip ${state.proteinFilter===p?'on':''}" data-protein="${esc(p)}">${esc(p)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="dd-grid">
+        ${list.map(r => recipeCardHtml(r)).join('') || `<div class="dd-empty"><div class="display">No recipes match</div>Try a different search or filter.</div>`}
+      </div>
+    `;
+    document.getElementById('dd-search-input').addEventListener('input', e => { state.search = e.target.value; renderRecipes(body); });
+    body.querySelectorAll('[data-protein]').forEach(el => el.addEventListener('click', () => {
+      const p = el.dataset.protein;
+      state.proteinFilter = state.proteinFilter === p ? null : p;
+      renderRecipes(body);
+    }));
+    body.querySelectorAll('[data-bucket]').forEach(el => el.addEventListener('click', () => {
+      const b = el.dataset.bucket;
+      state.bucketFilter = b === 'all' ? null : b;
+      renderRecipes(body);
+    }));
+    document.getElementById('dd-add-recipe').addEventListener('click', () => openRecipeModal(null));
+    document.getElementById('dd-backup').addEventListener('click', () => {
+      const backup = {
+        exportedAt: new Date().toISOString(),
+        recipes: state.recipes,
+        thisWeek: state.thisWeek,
+        checkedGrocery: state.checkedGrocery,
+        tryChance: state.tryChance,
+        weekSize: state.weekSize
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dinner-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+    const restoreFileInput = document.getElementById('dd-restore-file');
+    document.getElementById('dd-restore-btn').addEventListener('click', () => restoreFileInput.click());
+    restoreFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try{
+          const backup = JSON.parse(ev.target.result);
+          if(!Array.isArray(backup.recipes)) throw new Error('Not a valid backup file');
+          if(!confirm(`This backup has ${backup.recipes.length} recipes. This will REPLACE everything currently in your browser. Continue?`)) return;
+          state.recipes = backup.recipes;
+          state.thisWeek = backup.thisWeek || [];
+          state.checkedGrocery = backup.checkedGrocery || {};
+          state.tryChance = backup.tryChance !== undefined ? backup.tryChance : 0.3;
+          state.weekSize = backup.weekSize || 5;
+          await saveRecipes(); await saveWeek(); await saveChecked(); await saveTryChance(); await saveWeekSize();
+          alert('Restored! Refreshing…');
+          render();
+        }catch(err){
+          alert('Could not read that file as a valid backup: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      restoreFileInput.value = '';
+    });
+    body.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', (ev) => {
+      if(ev.target.closest('.dd-check')) return;
+      openRecipeModal(el.dataset.id);
+    }));
+    body.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleWeek(el.dataset.id);
+      renderRecipes(body);
+    }));
+  }
+
+  function recipeCardHtml(r){
+    const inWeek = state.thisWeek.includes(r.id);
+    const isTry = (r.bucket||'rotation') === 'tryList';
+    const noIngr = r.ingredients.length === 0;
+    const preview = noIngr ? '' : r.ingredients.slice(0,4).map(i=>i.name).join(', ') + (r.ingredients.length>4?'…':'');
+    return `
+      <div class="dd-card" data-id="${r.id}">
+        <div class="dd-check ${inWeek?'on':''}" data-id="${r.id}" title="${inWeek?'Remove from this week':'Add to this week'}">${inWeek?'✓':''}</div>
+        <h3>${esc(r.name)}</h3>
+        <div class="meta">
+          ${isTry?`<span class="dd-tag dd-badge-try">Want to try</span>`:''}
+          ${isTry && r.surpriseEligible===false?`<span class="dd-tag" style="color:var(--ink-soft);">not in the draw</span>`:''}
+          <span class="dd-tag">${esc(r.protein)}</span>
+          ${r.cuisine?`<span class="dd-tag">${esc(r.cuisine)}</span>`:''}
+          <span>${r.servings||'–'} servings</span>
+          ${r.timeMinutes?`<span>· ${r.timeMinutes} min</span>`:''}
+          ${noIngr?`<span class="dd-tag dd-badge-warn">needs ingredients</span>`:''}
+        </div>
+        <div class="ingr-preview">${esc(preview)}</div>
+      </div>
+    `;
+  }
+
+  function toggleWeek(id){
+    if(state.thisWeek.includes(id)){
+      state.thisWeek = state.thisWeek.filter(x=>x!==id);
+    } else {
+      if(state.thisWeek.length >= state.weekSize){
+        alert(`You've already got ${state.weekSize} recipe${state.weekSize===1?'':'s'} planned for this week. Remove one first, or adjust the week size in the This Week tab.`);
+        return;
+      }
+      state.thisWeek.push(id);
+    }
+    saveWeek();
+  }
+
+  // ---------- Recipe Modal ----------
+  function openRecipeModal(id){
+    const existing = id ? getRecipe(id) : null;
+    const draft = existing ? JSON.parse(JSON.stringify(existing)) : {
+      id: uid(), name:'', protein:'Chicken', cuisine:'', servings:4, bucket:'rotation', ingredients:[], notes:'', surpriseEligible:true, timeMinutes:null
+    };
+    if(!draft.bucket) draft.bucket = 'rotation';
+    if(draft.surpriseEligible === undefined) draft.surpriseEligible = true;
+    const back = document.createElement('div');
+    back.className = 'dd-modal-back';
+    back.innerHTML = `
+      <div class="dd-modal">
+        <button class="dd-close">&times;</button>
+        <h2>${existing? 'Edit recipe' : 'Add a recipe'}</h2>
+        <div class="dd-field"><label>Name</label><input type="text" id="f-name" value="${esc(draft.name)}" placeholder="e.g. Chicken Tikka"/></div>
+        <div class="dd-row2">
+          <div class="dd-field"><label>List</label>
+            <select id="f-bucket">
+              <option value="rotation" ${draft.bucket==='rotation'?'selected':''}>In the rotation</option>
+              <option value="tryList" ${draft.bucket==='tryList'?'selected':''}>Want to try</option>
+            </select>
+          </div>
+          <div class="dd-field"><label>Protein</label>
+            <select id="f-protein">${PROTEINS.map(p=>`<option ${p===draft.protein?'selected':''}>${p}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="dd-row2">
+          <div class="dd-field"><label>Cuisine (optional)</label><input type="text" id="f-cuisine" value="${esc(draft.cuisine||'')}" placeholder="e.g. Indian"/></div>
+          <div class="dd-field"><label>Servings</label><input type="number" id="f-servings" value="${draft.servings||4}" min="1"/></div>
+        </div>
+        <div class="dd-row2">
+          <div class="dd-field"><label>Time in minutes (optional)</label><input type="number" id="f-time" value="${draft.timeMinutes ?? ''}" min="1" placeholder="e.g. 20"/></div>
+          <div></div>
+        </div>
+        <div class="dd-field" id="f-surprise-wrap" style="display:${draft.bucket==='tryList'?'block':'none'};">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:600;color:var(--ink);">
+            <input type="checkbox" id="f-surprise" style="width:auto;" ${draft.surpriseEligible!==false?'checked':''}/>
+            Eligible for random "Suggest my week" swap-ins
+          </label>
+          <div class="dd-help" style="margin-top:4px;">Uncheck this if it's not ready yet (e.g. missing ingredients) and you don't want it surfacing on its own.</div>
+        </div>
+        <div class="dd-field">
+          <label>Ingredients ${draft.ingredients.length===0?'(add now, or come back later)':''}</label>
+          <div id="f-ingr-list"></div>
+          <button class="dd-btn secondary" id="f-add-ingr" style="margin-top:4px;">+ Add ingredient</button>
+        </div>
+        <div class="dd-field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="e.g. buy extra to stretch across two meals">${esc(draft.notes||'')}</textarea></div>
+        <div class="dd-modal-actions">
+          ${existing? `<button class="dd-btn secondary" id="f-delete" style="color:var(--danger);border-color:var(--danger);">Delete recipe</button>` : ''}
+          ${existing && draft.bucket==='tryList'? `<button class="dd-btn secondary" id="f-mark-tried">✓ Tried it — move to Rotation</button>` : ''}
+          <div style="flex:1;"></div>
+          <button class="dd-btn secondary" id="f-cancel">Cancel</button>
+          <button class="dd-btn" id="f-save">Save recipe</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(back);
+
+    function renderIngrRows(){
+      const wrap = back.querySelector('#f-ingr-list');
+      wrap.innerHTML = draft.ingredients.map((ing, idx) => `
+        <div class="dd-ingr-row" data-idx="${idx}">
+          <input type="text" placeholder="amt" value="${ing.amount ?? ''}" data-field="amount"/>
+          <select data-field="unit">${UNITS.map(u=>`<option ${u===ing.unit?'selected':''}>${u}</option>`).join('')}</select>
+          <input type="text" placeholder="ingredient name" value="${esc(ing.name||'')}" data-field="name"/>
+          <select data-field="category">${CATS.map(c=>`<option ${c===ing.category?'selected':''}>${c}</option>`).join('')}</select>
+          <button class="dd-btn danger" data-remove="${idx}" title="remove">✕</button>
+        </div>
+      `).join('');
+      wrap.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => {
+        const idx = +el.closest('.dd-ingr-row').dataset.idx;
+        const field = el.dataset.field;
+        draft.ingredients[idx][field] = field==='amount' ? el.value : el.value;
+      }));
+      wrap.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => {
+        draft.ingredients.splice(+el.dataset.remove, 1);
+        renderIngrRows();
+      }));
+    }
+    renderIngrRows();
+
+    back.querySelector('#f-add-ingr').addEventListener('click', () => {
+      draft.ingredients.push({name:'',amount:'',unit:'count',category:'Produce'});
+      renderIngrRows();
+    });
+    back.querySelector('.dd-close').addEventListener('click', () => back.remove());
+    back.querySelector('#f-cancel').addEventListener('click', () => back.remove());
+    back.addEventListener('click', (e) => { if(e.target === back) back.remove(); });
+    back.querySelector('#f-bucket').addEventListener('change', (e) => {
+      back.querySelector('#f-surprise-wrap').style.display = e.target.value === 'tryList' ? 'block' : 'none';
+    });
+
+    if(existing){
+      back.querySelector('#f-delete').addEventListener('click', () => {
+        if(confirm(`Delete "${existing.name}"? This can't be undone.`)){
+          state.recipes = state.recipes.filter(r => r.id !== existing.id);
+          state.thisWeek = state.thisWeek.filter(id2 => id2 !== existing.id);
+          saveRecipes(); saveWeek();
+          back.remove();
+          render();
+        }
+      });
+      const markTriedBtn = back.querySelector('#f-mark-tried');
+      if(markTriedBtn){
+        markTriedBtn.addEventListener('click', () => {
+          const idx = state.recipes.findIndex(r => r.id === existing.id);
+          if(idx > -1){
+            state.recipes[idx].bucket = 'rotation';
+            saveRecipes();
+          }
+          back.remove();
+          render();
+        });
+      }
+    }
+
+    back.querySelector('#f-save').addEventListener('click', () => {
+      const name = back.querySelector('#f-name').value.trim();
+      if(!name){ alert('Give the recipe a name first.'); return; }
+      draft.name = name;
+      draft.bucket = back.querySelector('#f-bucket').value;
+      draft.surpriseEligible = back.querySelector('#f-surprise').checked;
+      draft.protein = back.querySelector('#f-protein').value;
+      draft.cuisine = back.querySelector('#f-cuisine').value.trim();
+      draft.servings = +back.querySelector('#f-servings').value || 4;
+      const timeVal = back.querySelector('#f-time').value;
+      draft.timeMinutes = timeVal ? +timeVal : null;
+      draft.notes = back.querySelector('#f-notes').value.trim();
+      draft.ingredients = draft.ingredients
+        .filter(i => i.name && i.name.trim())
+        .map(i => ({ name: i.name.trim().toLowerCase(), amount: parseFloat(i.amount) || 0, unit: i.unit, category: i.category }));
+
+      if(existing){
+        const idx = state.recipes.findIndex(r=>r.id===existing.id);
+        state.recipes[idx] = draft;
+      } else {
+        state.recipes.push(draft);
+      }
+      saveRecipes();
+      back.remove();
+      render();
+    });
+  }
+
+  // ---------- This Week ----------
+  function findSharedIngredients(recipeIds){
+    const map = {}; // ingredientName -> [{recipeId, recipeName, amount, unit}]
+    recipeIds.forEach(id => {
+      const r = getRecipe(id);
+      if(!r) return;
+      r.ingredients.forEach(ing => {
+        if(!map[ing.name]) map[ing.name] = [];
+        map[ing.name].push({recipeId: id, recipeName: r.name, amount: ing.amount, unit: ing.unit});
+      });
+    });
+    const shared = Object.entries(map).filter(([name, uses]) => {
+      const distinctRecipes = new Set(uses.map(u=>u.recipeId));
+      return distinctRecipes.size > 1;
+    });
+    return shared;
+  }
+
+  function suggestWeek(){
+    const pool = state.recipes.filter(r => (r.bucket||'rotation') === 'rotation');
+    const tryPool = state.recipes.filter(r => r.bucket === 'tryList' && r.surpriseEligible !== false);
+    if(pool.length === 0 && tryPool.length === 0) return [];
+    // ingredient -> recipe ids (only for Meat category, most relevant for bulk buying)
+    const ingrMap = {};
+    pool.forEach(r => r.ingredients.forEach(i => {
+      if(i.category === 'Meat'){
+        ingrMap[i.name] = ingrMap[i.name] || new Set();
+        ingrMap[i.name].add(r.id);
+      }
+    }));
+    let pairIds = null;
+    const candidates = Object.entries(ingrMap).filter(([name, set]) => set.size > 1);
+    if(candidates.length){
+      const [name, set] = candidates[Math.floor(Math.random()*candidates.length)];
+      pairIds = Array.from(set).slice(0,2);
+    }
+    let picked = [];
+    if(pairIds) picked = pairIds.slice();
+    const shuffled = pool.slice().sort(()=>Math.random()-0.5);
+    const usedProteins = {};
+    picked.forEach(id => { const r = getRecipe(id); if(r) usedProteins[r.protein] = (usedProteins[r.protein]||0)+1; });
+    for(const r of shuffled){
+      if(picked.length >= state.weekSize) break;
+      if(picked.includes(r.id)) continue;
+      const count = usedProteins[r.protein] || 0;
+      if(count >= 2) continue; // limit repeats for variety
+      picked.push(r.id);
+      usedProteins[r.protein] = count + 1;
+    }
+    // fill remaining slots if still short (ignore protein cap)
+    for(const r of shuffled){
+      if(picked.length >= state.weekSize) break;
+      if(!picked.includes(r.id)) picked.push(r.id);
+    }
+    picked = picked.slice(0, state.weekSize);
+
+    // Sometimes swap in a Want to Try recipe, based on the chosen chance.
+    if(tryPool.length && Math.random() < state.tryChance && picked.length > 0){
+      const pickIdx = Math.floor(Math.random()*picked.length);
+      const tryPick = tryPool[Math.floor(Math.random()*tryPool.length)];
+      picked[pickIdx] = tryPick.id;
+    }
+    return picked;
+  }
+
+  function guidedSuggestWeek(proteinCounts, maxTime){
+    const pool = state.recipes.filter(r => {
+      const bucketOk = (r.bucket||'rotation') === 'rotation' || (r.bucket === 'tryList' && r.surpriseEligible !== false);
+      if(!bucketOk) return false;
+      if(maxTime && (!r.timeMinutes || r.timeMinutes > maxTime)) return false;
+      return true;
+    });
+    let picked = [];
+    const usedIds = new Set();
+    const shortfalls = [];
+    Object.entries(proteinCounts).forEach(([protein, count]) => {
+      if(!count) return;
+      const options = pool.filter(r => r.protein === protein && !usedIds.has(r.id)).sort(()=>Math.random()-0.5);
+      const take = options.slice(0, count);
+      take.forEach(r => { picked.push(r.id); usedIds.add(r.id); });
+      if(take.length < count) shortfalls.push({protein, count, found: take.length});
+    });
+    const remaining = pool.filter(r => !usedIds.has(r.id)).sort(()=>Math.random()-0.5);
+    for(const r of remaining){
+      if(picked.length >= state.weekSize) break;
+      picked.push(r.id); usedIds.add(r.id);
+    }
+    return { picked: picked.slice(0, state.weekSize), shortfalls };
+  }
+
+  function renderWeek(body){
+    const shared = findSharedIngredients(state.thisWeek);
+    const colors = ['#5C7A5C','#C98A2E','#B5533C','#3F5A3F','#8A6D3B'];
+    body.innerHTML = `
+      <div class="dd-toolbar">
+        <button class="dd-btn" id="dd-suggest">Suggest my week</button>
+        <button class="dd-btn secondary" id="dd-guided">Guided suggest…</button>
+        <button class="dd-btn secondary" id="dd-clear-week" ${state.thisWeek.length===0?'disabled':''}>Clear week</button>
+        <select class="dd-select-inline" id="dd-try-chance">
+          ${TRY_CHANCE_OPTIONS.map(o => `<option value="${o.value}" ${o.value===state.tryChance?'selected':''}>${o.label}</option>`).join('')}
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);">
+          Nights this week:
+          <input type="number" id="dd-week-size" min="1" max="10" value="${state.weekSize}" style="width:52px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:13px;"/>
+        </label>
+        <div style="flex:1;"></div>
+        <span class="dd-help">${state.thisWeek.length}/${state.weekSize} slots filled</span>
+      </div>
+      <div class="dd-week-slots" id="dd-slots"></div>
+      <div class="dd-shared-panel">
+        <h3>Shared ingredients this week</h3>
+        ${shared.length ? shared.map(([name, uses], i) => `
+          <div class="dd-shared-item">
+            <span class="dd-dot" style="background:${colors[i%colors.length]}"></span>
+            <span><strong>${esc(name)}</strong> — used in ${uses.map(u=>esc(u.recipeName)).join(' & ')}. Consider buying in bulk.</span>
+          </div>
+        `).join('') : `<div class="dd-shared-none">No overlapping ingredients yet — add recipes to this week to see stretch opportunities.</div>`}
+      </div>
+      <div class="dd-help">Tip: click a recipe's checkbox in the Recipe Box, or use "Suggest my week" to auto-fill open slots.</div>
+    `;
+    const slotsEl = document.getElementById('dd-slots');
+    slotsEl.innerHTML = Array.from({length:state.weekSize}).map((_, i) => {
+      const id = state.thisWeek[i];
+      const r = id ? getRecipe(id) : null;
+      if(!r) return `<div class="dd-slot"><div class="num">Slot ${i+1}</div><div class="empty-msg">Empty — add a recipe</div></div>`;
+      const isTry = r.bucket === 'tryList';
+      const noIngr = r.ingredients.length === 0;
+      return `
+        <div class="dd-slot filled">
+          <div class="num">Slot ${i+1} · ${esc(r.protein)}${isTry?' · <span style="color:var(--mustard);">want to try</span>':''}</div>
+          <h4>${esc(r.name)}</h4>
+          <div class="meta">${r.cuisine?esc(r.cuisine)+' · ':''}${r.servings||'–'} servings${noIngr?' · <span style="color:var(--danger);">needs ingredients</span>':''}</div>
+          <div class="dd-slot-actions">
+            <button class="dd-btn secondary" data-swap="${id}">Swap</button>
+            <button class="dd-btn secondary" data-remove="${id}">Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    slotsEl.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', () => {
+      state.thisWeek = state.thisWeek.filter(x=>x!==el.dataset.remove);
+      saveWeek(); renderWeek(body);
+    }));
+    slotsEl.querySelectorAll('[data-swap]').forEach(el => el.addEventListener('click', () => {
+      const currentId = el.dataset.swap;
+      openSwapPicker(currentId, body);
+    }));
+    document.getElementById('dd-suggest').addEventListener('click', () => {
+      state.thisWeek = suggestWeek();
+      saveWeek(); renderWeek(body);
+    });
+    document.getElementById('dd-guided').addEventListener('click', () => {
+      openGuidedModal(body);
+    });
+    document.getElementById('dd-try-chance').addEventListener('change', (e) => {
+      state.tryChance = parseFloat(e.target.value);
+      saveTryChance();
+    });
+    document.getElementById('dd-week-size').addEventListener('change', (e) => {
+      let val = parseInt(e.target.value) || 5;
+      val = Math.max(1, Math.min(10, val));
+      e.target.value = val;
+      state.weekSize = val;
+      if(state.thisWeek.length > val){
+        state.thisWeek = state.thisWeek.slice(0, val);
+        saveWeek();
+      }
+      saveWeekSize();
+      renderWeek(body);
+    });
+    document.getElementById('dd-clear-week').addEventListener('click', () => {
+      if(confirm(`Clear all ${state.weekSize} slots for this week?`)){
+        state.thisWeek = []; saveWeek(); renderWeek(body);
+      }
+    });
+  }
+
+  function openGuidedModal(weekBody){
+    const back = document.createElement('div');
+    back.className = 'dd-modal-back';
+    back.innerHTML = `
+      <div class="dd-modal">
+        <button class="dd-close">&times;</button>
+        <h2>Guided suggestions</h2>
+        <div class="dd-help" style="margin-bottom:14px;">Set how many of each protein you want (up to ${state.weekSize} total). Leave any at 0 to skip — remaining slots fill in on their own.</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+          ${PROTEINS.map(p => `
+            <div class="dd-field" style="margin-bottom:0;">
+              <label>${esc(p)}</label>
+              <input type="number" min="0" max="${state.weekSize}" value="0" data-protein="${esc(p)}"/>
+            </div>
+          `).join('')}
+        </div>
+        <div class="dd-field">
+          <label>Max time per recipe</label>
+          <select id="g-time">
+            <option value="">No limit</option>
+            <option value="20">Under 20 min</option>
+            <option value="40">Under 40 min</option>
+            <option value="60">Under 60 min</option>
+          </select>
+        </div>
+        <div class="dd-modal-actions">
+          <button class="dd-btn secondary" id="g-cancel">Cancel</button>
+          <button class="dd-btn" id="g-generate">Generate</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(back);
+    back.querySelector('.dd-close').addEventListener('click', () => back.remove());
+    back.querySelector('#g-cancel').addEventListener('click', () => back.remove());
+    back.addEventListener('click', (e) => { if(e.target === back) back.remove(); });
+    back.querySelector('#g-generate').addEventListener('click', () => {
+      const proteinCounts = {};
+      let total = 0;
+      back.querySelectorAll('[data-protein]').forEach(el => {
+        const v = parseInt(el.value) || 0;
+        if(v > 0){ proteinCounts[el.dataset.protein] = v; total += v; }
+      });
+      if(total > state.weekSize){
+        alert(`That adds up to more than ${state.weekSize} recipes, and the week only has ${state.weekSize} slots. Lower a few counts and try again.`);
+        return;
+      }
+      const maxTimeVal = back.querySelector('#g-time').value;
+      const maxTime = maxTimeVal ? +maxTimeVal : null;
+      const result = guidedSuggestWeek(proteinCounts, maxTime);
+      state.thisWeek = result.picked;
+      saveWeek();
+      back.remove();
+      renderWeek(weekBody);
+      if(result.shortfalls.length){
+        alert("Couldn't fully fill your request: " + result.shortfalls.map(s => `${s.protein} — wanted ${s.count}, only found ${s.found} that fit`).join('; '));
+      }
+    });
+  }
+
+  function openSwapPicker(currentId, weekBody){
+    const back = document.createElement('div');
+    back.className = 'dd-modal-back';
+    const options = state.recipes.filter(r => !state.thisWeek.includes(r.id) || r.id === currentId);
+    back.innerHTML = `
+      <div class="dd-modal">
+        <button class="dd-close">&times;</button>
+        <h2>Swap in a different recipe</h2>
+        <div class="dd-grid">
+          ${options.map(r => `<div class="dd-card" data-id="${r.id}" style="cursor:pointer;"><h3>${esc(r.name)}</h3><div class="meta">${r.bucket==='tryList'?'<span class="dd-tag dd-badge-try">Want to try</span>':''}<span class="dd-tag">${esc(r.protein)}</span></div></div>`).join('')}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(back);
+    back.querySelector('.dd-close').addEventListener('click', () => back.remove());
+    back.addEventListener('click', (e) => { if(e.target === back) back.remove(); });
+    back.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', () => {
+      const idx = state.thisWeek.indexOf(currentId);
+      if(idx > -1) state.thisWeek[idx] = el.dataset.id;
+      saveWeek();
+      back.remove();
+      renderWeek(weekBody);
+    }));
+  }
+
+  // ---------- Grocery List ----------
+  function buildGroceryList(){
+    const groups = {}; // category -> map key(name|unit) -> {name, amount, unit, from:[names]}
+    state.thisWeek.forEach(id => {
+      const r = getRecipe(id);
+      if(!r) return;
+      r.ingredients.forEach(ing => {
+        const cat = ing.category || 'Other';
+        groups[cat] = groups[cat] || {};
+        const key = ing.name + '|' + ing.unit;
+        if(!groups[cat][key]) groups[cat][key] = {name: ing.name, unit: ing.unit, amount: 0, from: []};
+        groups[cat][key].amount += (ing.amount || 0);
+        groups[cat][key].from.push(r.name);
+      });
+    });
+    return groups;
+  }
+
+  function renderGrocery(body){
+    if(state.thisWeek.length === 0){
+      body.innerHTML = `<div class="dd-empty"><div class="display">No recipes planned yet</div>Head to the This Week tab and add recipes to generate your list.</div>`;
+      return;
+    }
+    const groups = buildGroceryList();
+    const catOrder = CATS.filter(c => groups[c]);
+    const missing = state.thisWeek.map(id=>getRecipe(id)).filter(r => r && r.ingredients.length===0);
+    body.innerHTML = `
+      <div class="dd-toolbar">
+        <span class="dd-help">Combined from: ${state.thisWeek.map(id=>esc(getRecipe(id)?.name||'')).join(', ')}</span>
+        <div style="flex:1;"></div>
+        <button class="dd-btn secondary" id="dd-copy">Copy as text</button>
+        <button class="dd-btn secondary" id="dd-reset-check">Uncheck all</button>
+      </div>
+      ${missing.length ? `<div class="dd-warn-banner">${missing.map(r=>esc(r.name)).join(', ')} ${missing.length>1?"don't":"doesn't"} have ingredients entered yet, so ${missing.length>1?'they':'it'} won't show up below. Add ingredients from the Recipe Box to include ${missing.length>1?'them':'it'}.</div>` : ''}
+      ${catOrder.map(cat => `
+        <div class="dd-glist-cat">
+          <h3>${esc(cat)}</h3>
+          ${Object.values(groups[cat]).map(item => {
+            const key = cat+'|'+item.name+'|'+item.unit;
+            const checked = !!state.checkedGrocery[key];
+            const amtDisplay = item.unit === 'count' ? `${item.amount}` : `${item.amount} ${item.unit}`;
+            return `
+            <div class="dd-glist-item ${checked?'checked':''}">
+              <div class="dd-glist-check ${checked?'on':''}" data-key="${esc(key)}">${checked?'✓':''}</div>
+              <div>
+                <span class="amt">${esc(amtDisplay)}</span>${esc(item.name)}
+                <span class="from">${item.from.length>1?'used in '+item.from.map(esc).join(' & '):'for '+esc(item.from[0])}</span>
+              </div>
+            </div>
+          `}).join('')}
+        </div>
+      `).join('')}
+    `;
+    body.querySelectorAll('.dd-glist-check').forEach(el => el.addEventListener('click', () => {
+      const key = el.dataset.key;
+      state.checkedGrocery[key] = !state.checkedGrocery[key];
+      saveChecked();
+      renderGrocery(body);
+    }));
+    document.getElementById('dd-reset-check').addEventListener('click', () => {
+      state.checkedGrocery = {}; saveChecked(); renderGrocery(body);
+    });
+    document.getElementById('dd-copy').addEventListener('click', () => {
+      let text = "Grocery List — " + state.thisWeek.map(id=>getRecipe(id)?.name).join(', ') + "\n\n";
+      catOrder.forEach(cat => {
+        text += cat.toUpperCase() + "\n";
+        Object.values(groups[cat]).forEach(item => {
+          const amtDisplay = item.unit === 'count' ? `${item.amount}` : `${item.amount} ${item.unit}`;
+          text += `- ${amtDisplay} ${item.name}\n`;
+        });
+        text += "\n";
+      });
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('dd-copy');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(()=>{ btn.textContent = orig; }, 1500);
+      }).catch(()=> alert('Could not copy — your browser may be blocking clipboard access.'));
+    });
+  }
+
+  loadState();
+})();
+</script>
