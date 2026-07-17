@@ -242,6 +242,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     if(r.makesLeftovers === undefined) r.makesLeftovers = (r.servings||0) > 4;
     if(r.prepMinutes === undefined) r.prepMinutes = null;
     if(r.cookMinutes === undefined) r.cookMinutes = null;
+    if(r.recipeText === undefined) r.recipeText = '';
     return r;
   }
 
@@ -482,7 +483,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     const existing = id ? getRecipe(id) : null;
     const draft = existing ? JSON.parse(JSON.stringify(existing)) : {
       id: uid(), name:'', protein:'Chicken', cuisine:'', servings:4, bucket:'rotation',
-      ingredients:[], notes:'', surpriseEligible:true, prepMinutes:null, cookMinutes:null, makesLeftovers:false
+      ingredients:[], notes:'', recipeText:'', surpriseEligible:true, prepMinutes:null, cookMinutes:null, makesLeftovers:false
     };
     if(!draft.ingredients) draft.ingredients = [];
     let leftoversTouched = false;
@@ -548,6 +549,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
           <div id="f-ingr-list"></div>
           <button class="dd-btn secondary" id="f-add-ingr" style="margin-top:4px;">+ Add ingredient row</button>
         </div>
+        <div class="dd-field"><label>Full recipe (steps, instructions — optional)</label><textarea id="f-recipe-text" style="min-height:120px;" placeholder="Write out the steps here so this doubles as your recipe box, not just a shopping list generator.">${esc(draft.recipeText||'')}</textarea></div>
         <div class="dd-field"><label>Notes (optional)</label><textarea id="f-notes">${esc(draft.notes||'')}</textarea></div>
         <div class="dd-autosave-note" id="f-autosave-note"></div>
         <div class="dd-modal-actions">
@@ -596,6 +598,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       draft.cookMinutes = (cookH*60 + cookM) || null;
       back.querySelector('#f-total').value = formatMinutes((draft.prepMinutes||0)+(draft.cookMinutes||0));
       draft.makesLeftovers = back.querySelector('#f-leftovers').checked;
+      draft.recipeText = back.querySelector('#f-recipe-text').value.trim();
       draft.notes = back.querySelector('#f-notes').value.trim();
     }
 
@@ -616,7 +619,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       }, 700);
     }
 
-    back.querySelectorAll('#f-name,#f-cuisine,#f-notes').forEach(el => el.addEventListener('input', scheduleAutosave));
+    back.querySelectorAll('#f-name,#f-cuisine,#f-notes,#f-recipe-text').forEach(el => el.addEventListener('input', scheduleAutosave));
     back.querySelectorAll('#f-bucket,#f-protein').forEach(el => el.addEventListener('change', scheduleAutosave));
     back.querySelector('#f-servings').addEventListener('input', (e) => {
       if(!leftoversTouched){
