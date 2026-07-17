@@ -197,19 +197,19 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     {name:"Chicken Noodle Soup", protein:"Chicken", cuisine:"American", servings:6, bucket:"rotation", ingredients:[], notes:""},
     {name:"French Onion Soup", protein:"Vegetarian", cuisine:"French", servings:6, bucket:"rotation", ingredients:[], notes:""},
     {name:"Salad Night", protein:"Vegetarian", cuisine:"American", servings:3, bucket:"rotation", ingredients:[], notes:""},
-    {name:"Chicken Teriyaki Bowls", protein:"Chicken", cuisine:"Japanese", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Korean-Inspired Beef Bowls", protein:"Beef", cuisine:"Korean", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Meatball Subs", protein:"Beef", cuisine:"Italian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Cuban Mojo Pork", protein:"Pork", cuisine:"Cuban", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Thai Curry (Red or Green)", protein:"Chicken", cuisine:"Thai", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Coq au Vin", protein:"Chicken", cuisine:"French", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Beef Bourguignon", protein:"Beef", cuisine:"French", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Picadillo", protein:"Beef", cuisine:"Cuban", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Butter Chicken", protein:"Chicken", cuisine:"Indian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"French Dip Sandwiches", protein:"Beef", cuisine:"American", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Calzones", protein:"Other", cuisine:"Italian", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Chicken Cordon Bleu", protein:"Chicken", cuisine:"French", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""},
-    {name:"Cottage Pie (Shepherd's Pie with Beef)", protein:"Beef", cuisine:"British", servings:3, bucket:"tryList", surpriseEligible:false, ingredients:[], notes:""}
+    {name:"Chicken Teriyaki Bowls", protein:"Chicken", cuisine:"Japanese", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Korean-Inspired Beef Bowls", protein:"Beef", cuisine:"Korean", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Meatball Subs", protein:"Beef", cuisine:"Italian", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Cuban Mojo Pork", protein:"Pork", cuisine:"Cuban", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Thai Curry (Red or Green)", protein:"Chicken", cuisine:"Thai", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Coq au Vin", protein:"Chicken", cuisine:"French", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Beef Bourguignon", protein:"Beef", cuisine:"French", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Picadillo", protein:"Beef", cuisine:"Cuban", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Butter Chicken", protein:"Chicken", cuisine:"Indian", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"French Dip Sandwiches", protein:"Beef", cuisine:"American", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Calzones", protein:"Other", cuisine:"Italian", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Chicken Cordon Bleu", protein:"Chicken", cuisine:"French", servings:3, bucket:"tryList", ingredients:[], notes:""},
+    {name:"Cottage Pie (Shepherd's Pie with Beef)", protein:"Beef", cuisine:"British", servings:3, bucket:"tryList", ingredients:[], notes:""}
   ];
 
   function uid(){ return 'r' + Math.random().toString(36).slice(2,10); }
@@ -388,6 +388,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       <div class="dd-toolbar">
         <input class="dd-search" id="dd-search-input" placeholder="Search by name, ingredient, or cuisine…" value="${esc(state.search)}"/>
         <button class="dd-btn" id="dd-add-recipe">+ Add recipe</button>
+        ${state.recipes.some(r=>r.bucket==='tryList' && r.surpriseEligible===false) ? `<button class="dd-btn secondary" id="dd-fix-surprise" style="color:#2f5233;border-color:#2f5233;">Enable surprises for all Want-to-try</button>` : ''}
       </div>
       <div class="dd-toolbar">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -408,6 +409,15 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     body.querySelectorAll('[data-protein]').forEach(el => el.addEventListener('click', () => { const p = el.dataset.protein; state.proteinFilter = state.proteinFilter===p?null:p; renderRecipes(body); }));
     body.querySelectorAll('[data-bucket]').forEach(el => el.addEventListener('click', () => { const b = el.dataset.bucket; state.bucketFilter = b==='all'?null:b; renderRecipes(body); }));
     document.getElementById('dd-add-recipe').addEventListener('click', () => openRecipeModal(null));
+    const fixBtn = document.getElementById('dd-fix-surprise');
+    if(fixBtn){
+      fixBtn.addEventListener('click', async () => {
+        const toFix = state.recipes.filter(r => r.bucket==='tryList' && r.surpriseEligible===false);
+        if(!confirm(`Make all ${toFix.length} "want to try" recipes eligible for random surprise picks?`)) return;
+        for(const r of toFix){ r.surpriseEligible = true; await saveRecipeRow(r); }
+        renderRecipes(body);
+      });
+    }
     body.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', ev => { if(ev.target.closest('.dd-check')) return; openRecipeModal(el.dataset.id); }));
     body.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', async ev => { ev.stopPropagation(); await toggleWeek(el.dataset.id); renderRecipes(body); }));
   }
