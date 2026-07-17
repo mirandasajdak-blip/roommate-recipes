@@ -155,6 +155,8 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
   let state = {
     recipes: [], thisWeek: [], tab: 'recipes', mode: 'app', search: '',
     proteinFilter: null, bucketFilter: null, checkedGrocery: {}, extraGrocery: [],
+    staples: ["salt","black pepper","olive oil","vegetable oil","butter","garlic powder","onion powder","cooking spray","flour","sugar"],
+    staplesActive: {},
     tryChance: 1, weekSize: 5, loadError: false, loadErrorDetail: null, loadErrorCode: null, loaded: false
   };
 
@@ -256,6 +258,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     const payload = {
       id: 1, this_week: state.thisWeek, checked_grocery: state.checkedGrocery,
       extra_grocery: state.extraGrocery, try_chance: state.tryChance, week_size: state.weekSize,
+      staples: state.staples, staples_active: state.staplesActive,
       updated_at: new Date().toISOString()
     };
     const { error } = await supabase.from('app_meta').upsert(payload);
@@ -287,6 +290,8 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         state.extraGrocery = metaRow.extra_grocery || [];
         state.tryChance = metaRow.try_chance !== undefined && metaRow.try_chance !== null ? metaRow.try_chance : 1;
         state.weekSize = metaRow.week_size || 5;
+        state.staples = metaRow.staples !== undefined && metaRow.staples !== null ? metaRow.staples : state.staples;
+        state.staplesActive = metaRow.staples_active || {};
       }
     } catch(err){
       console.error("Database loading failed:", err);
@@ -443,7 +448,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
           <span class="dd-tag">${esc(r.protein)}</span>
           ${r.cuisine?`<span class="dd-tag">${esc(r.cuisine)}</span>`:''}
           <span>${r.servings||'–'} servings</span>
-          ${total?`<span>· ${total} min total</span>`:''}
+          ${total?`<span>· ${formatMinutes(total)} total</span>`:''}
           ${r.makesLeftovers?`<span class="dd-tag dd-badge-leftover">leftovers · 2 meals</span>`:''}
           ${noIngr?`<span class="dd-tag dd-badge-warn">needs ingredients</span>`:''}
         </div>
@@ -506,9 +511,19 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
           <div class="dd-field"><label>Servings</label><input type="number" id="f-servings" value="${draft.servings||4}" min="1"/></div>
         </div>
         <div class="dd-row3">
-          <div class="dd-field"><label>Prep time (min)</label><input type="number" id="f-prep" value="${draft.prepMinutes ?? ''}" min="0" placeholder="e.g. 10"/></div>
-          <div class="dd-field"><label>Cook time (min)</label><input type="number" id="f-cook" value="${draft.cookMinutes ?? ''}" min="0" placeholder="e.g. 25"/></div>
-          <div class="dd-field"><label>Total time</label><input type="text" id="f-total" value="${((draft.prepMinutes||0)+(draft.cookMinutes||0)) || ''}" disabled/></div>
+          <div class="dd-field"><label>Prep time</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="f-prep-h" value="${draft.prepMinutes ? Math.floor(draft.prepMinutes/60)||'' : ''}" min="0" placeholder="0" style="width:100%;"/><span class="dd-help">h</span>
+              <input type="number" id="f-prep-m" value="${draft.prepMinutes ? (draft.prepMinutes%60)||'' : ''}" min="0" max="59" placeholder="0" style="width:100%;"/><span class="dd-help">m</span>
+            </div>
+          </div>
+          <div class="dd-field"><label>Cook time</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="f-cook-h" value="${draft.cookMinutes ? Math.floor(draft.cookMinutes/60)||'' : ''}" min="0" placeholder="0" style="width:100%;"/><span class="dd-help">h</span>
+              <input type="number" id="f-cook-m" value="${draft.cookMinutes ? (draft.cookMinutes%60)||'' : ''}" min="0" max="59" placeholder="0" style="width:100%;"/><span class="dd-help">m</span>
+            </div>
+          </div>
+          <div class="dd-field"><label>Total time</label><input type="text" id="f-total" value="${formatMinutes((draft.prepMinutes||0)+(draft.cookMinutes||0))}" disabled/></div>
         </div>
         <div class="dd-field">
           <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:600;color:var(--ink);">
@@ -573,11 +588,13 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       draft.protein = back.querySelector('#f-protein').value;
       draft.cuisine = back.querySelector('#f-cuisine').value.trim();
       draft.servings = +back.querySelector('#f-servings').value || 4;
-      const prepVal = back.querySelector('#f-prep').value;
-      const cookVal = back.querySelector('#f-cook').value;
-      draft.prepMinutes = prepVal ? +prepVal : null;
-      draft.cookMinutes = cookVal ? +cookVal : null;
-      back.querySelector('#f-total').value = ((draft.prepMinutes||0)+(draft.cookMinutes||0)) || '';
+      const prepH = +back.querySelector('#f-prep-h').value || 0;
+      const prepM = +back.querySelector('#f-prep-m').value || 0;
+      const cookH = +back.querySelector('#f-cook-h').value || 0;
+      const cookM = +back.querySelector('#f-cook-m').value || 0;
+      draft.prepMinutes = (prepH*60 + prepM) || null;
+      draft.cookMinutes = (cookH*60 + cookM) || null;
+      back.querySelector('#f-total').value = formatMinutes((draft.prepMinutes||0)+(draft.cookMinutes||0));
       draft.makesLeftovers = back.querySelector('#f-leftovers').checked;
       draft.notes = back.querySelector('#f-notes').value.trim();
     }
@@ -607,8 +624,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       }
       scheduleAutosave();
     });
-    back.querySelector('#f-prep').addEventListener('input', scheduleAutosave);
-    back.querySelector('#f-cook').addEventListener('input', scheduleAutosave);
+    back.querySelectorAll('#f-prep-h,#f-prep-m,#f-cook-h,#f-cook-m').forEach(el => el.addEventListener('input', scheduleAutosave));
     back.querySelector('#f-leftovers').addEventListener('change', () => { leftoversTouched = true; scheduleAutosave(); });
     const surpriseEl = back.querySelector('#f-surprise');
     if(surpriseEl) surpriseEl.addEventListener('change', scheduleAutosave);
@@ -694,6 +710,16 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     }
     const p = parseFloat(str);
     return isNaN(p) ? 0 : p;
+  }
+
+  function formatMinutes(mins){
+    mins = mins || 0;
+    if(mins <= 0) return '';
+    const h = Math.floor(mins/60);
+    const m = mins % 60;
+    if(h && m) return `${h}h ${m}m`;
+    if(h) return `${h}h`;
+    return `${m}m`;
   }
 
   function formatAmount(num){
@@ -871,6 +897,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         state.thisWeek = [];
         state.extraGrocery = [];
         state.checkedGrocery = {};
+        state.staplesActive = {};
         await saveMeta(); renderWeek(body);
       }
     });
@@ -997,6 +1024,11 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     }));
   }
 
+  function isStapleName(name){
+    const n = (name||'').toLowerCase();
+    return state.staples.some(s => n.includes(s.toLowerCase()));
+  }
+
   function buildGroceryList(){
     const groups = {};
     uniqueWeekIds().forEach(id => {
@@ -1007,12 +1039,40 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         const cat = ing.category || 'Other';
         groups[cat] = groups[cat] || {};
         const key = ing.name + '|' + ing.unit;
-        if(!groups[cat][key]) groups[cat][key] = {name:ing.name, unit:ing.unit, amount:0, from:[]};
+        if(!groups[cat][key]) groups[cat][key] = {name:ing.name, unit:ing.unit, amount:0, from:[], isStaple: isStapleName(ing.name)};
         groups[cat][key].amount += parseFraction(ing.amount);
         groups[cat][key].from.push(r.name);
       });
     });
     return groups;
+  }
+
+  function openStaplesModal(groceryBody){
+    const back = document.createElement('div');
+    back.className = 'dd-modal-back';
+    back.innerHTML = `
+      <div class="dd-modal">
+        <button class="dd-close">&times;</button>
+        <h2>Pantry staples</h2>
+        <div class="dd-help" style="margin-bottom:12px;">Anything matching a word here gets pulled out of your grocery list into its own "usually on hand" section — one per line. If you're actually out of something, use "Need this — add to list" on that item instead of editing this list.</div>
+        <div class="dd-field"><textarea id="staples-textarea" style="min-height:180px;">${esc(state.staples.join('\n'))}</textarea></div>
+        <div class="dd-modal-actions">
+          <button class="dd-btn secondary" id="staples-cancel">Cancel</button>
+          <button class="dd-btn" id="staples-save">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(back);
+    back.querySelector('.dd-close').addEventListener('click', () => back.remove());
+    back.querySelector('#staples-cancel').addEventListener('click', () => back.remove());
+    back.addEventListener('click', e => { if(e.target === back) back.remove(); });
+    back.querySelector('#staples-save').addEventListener('click', async () => {
+      const lines = back.querySelector('#staples-textarea').value.split('\n').map(l => l.trim().toLowerCase()).filter(Boolean);
+      state.staples = lines;
+      await saveMeta();
+      back.remove();
+      renderGrocery(groceryBody);
+    });
   }
 
   function renderGrocery(body){
@@ -1027,6 +1087,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       <div class="dd-toolbar">
         <span class="dd-help">Combined from: ${uniqueWeekIds().map(id=>esc(getRecipe(id)?.name||'')).join(', ') || 'nothing planned yet'}</span>
         <div style="flex:1;"></div>
+        <button class="dd-btn secondary" id="dd-manage-staples">Manage staples</button>
         <button class="dd-btn secondary" id="dd-copy">Copy as text</button>
         <button class="dd-btn secondary" id="dd-reset-check">Uncheck all</button>
       </div>
@@ -1034,7 +1095,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       ${catOrder.map(cat => `
         <div class="dd-glist-cat">
           <h3>${esc(cat)}</h3>
-          ${Object.values(groups[cat]).map(item => {
+          ${Object.values(groups[cat]).filter(item => { const key=cat+'|'+item.name+'|'+item.unit; return !(item.isStaple && !state.staplesActive[key]); }).map(item => {
             const key = cat+'|'+item.name+'|'+item.unit;
             const checked = !!state.checkedGrocery[key];
             const displayAmt = formatAmount(item.amount);
@@ -1042,11 +1103,30 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
             return `
             <div class="dd-glist-item ${checked?'checked':''}">
               <div class="dd-glist-check ${checked?'on':''}" data-key="${esc(key)}">${checked?'✓':''}</div>
-              <div><span class="amt">${esc(amtDisplay)}</span>${esc(item.name)}<span class="from">${item.from.length>1?'used in '+item.from.map(esc).join(' & '):'for '+esc(item.from[0])}</span></div>
+              <div><span class="amt">${esc(amtDisplay)}</span>${esc(item.name)}<span class="from">${item.from.length>1?'used in '+item.from.map(esc).join(' & '):'for '+esc(item.from[0])}</span>${item.isStaple?` <button class="dd-btn secondary" data-unstaple="${esc(key)}" style="padding:1px 6px;font-size:10px;">mark as staple again</button>`:''}</div>
             </div>
           `}).join('')}
         </div>
       `).join('')}
+      ${(() => {
+        const staplesFound = [];
+        catOrder.forEach(cat => Object.values(groups[cat]).forEach(item => {
+          const key = cat+'|'+item.name+'|'+item.unit;
+          if(item.isStaple && !state.staplesActive[key]) staplesFound.push({item, key});
+        }));
+        if(!staplesFound.length) return '';
+        return `
+        <div class="dd-glist-cat">
+          <h3 style="color:var(--ink-soft);">Pantry staples (you probably have these)</h3>
+          ${staplesFound.map(({item,key}) => `
+            <div class="dd-glist-item" style="opacity:0.75;">
+              <div style="width:18px;flex-shrink:0;"></div>
+              <div>${esc(item.name)}<span class="from">for ${item.from.map(esc).join(' & ')}</span></div>
+              <button class="dd-btn secondary" data-need-staple="${esc(key)}" style="margin-left:auto;padding:3px 10px;font-size:11px;">Need this — add to list</button>
+            </div>
+          `).join('')}
+        </div>`;
+      })()}
       ${state.extraGrocery.length ? `
         <div class="dd-glist-cat">
           <h3>Other items</h3>
@@ -1066,6 +1146,13 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       const item = state.extraGrocery.find(x => x.id === el.dataset.extra);
       if(item){ item.checked = !item.checked; await saveMeta(); renderGrocery(body); }
     }));
+    body.querySelectorAll('[data-need-staple]').forEach(el => el.addEventListener('click', async () => {
+      state.staplesActive[el.dataset.needStaple] = true; await saveMeta(); renderGrocery(body);
+    }));
+    body.querySelectorAll('[data-unstaple]').forEach(el => el.addEventListener('click', async () => {
+      delete state.staplesActive[el.dataset.unstaple]; await saveMeta(); renderGrocery(body);
+    }));
+    document.getElementById('dd-manage-staples').addEventListener('click', () => openStaplesModal(body));
     document.getElementById('dd-reset-check').addEventListener('click', async () => { state.checkedGrocery = {}; await saveMeta(); renderGrocery(body); });
     document.getElementById('dd-copy').addEventListener('click', () => {
       let text = "Grocery List — " + uniqueWeekIds().map(id=>getRecipe(id)?.name).join(', ') + "\n\n";
@@ -1092,6 +1179,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     Object.entries(groups).forEach(([cat, items]) => {
       Object.values(items).forEach(item => {
         const key = cat+'|'+item.name+'|'+item.unit;
+        if(item.isStaple && !state.staplesActive[key]) return;
         const displayAmt = formatAmount(item.amount);
         const amtDisplay = item.unit==='count' ? displayAmt : `${displayAmt} ${item.unit}`;
         const qtyPart = amtDisplay.trim();
