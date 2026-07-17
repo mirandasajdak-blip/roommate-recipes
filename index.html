@@ -395,7 +395,6 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
   }
 
   function renderRecipes(body){
-    const list = filteredRecipes();
     body.innerHTML = `
       <div class="dd-toolbar">
         <input class="dd-search" id="dd-search-input" placeholder="Search by name, ingredient, or cuisine…" value="${esc(state.search)}"/>
@@ -413,13 +412,16 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
           ${PROTEINS.map(p => `<div class="dd-chip ${state.proteinFilter===p?'on':''}" data-protein="${esc(p)}">${esc(p)}</div>`).join('')}
         </div>
       </div>
-      <div class="dd-grid">
-        ${list.map(r => recipeCardHtml(r)).join('') || `<div class="dd-empty"><div class="display">No recipes match</div>Try a different search or filter.</div>`}
-      </div>
+      <div class="dd-grid" id="dd-recipes-grid"></div>
     `;
-    document.getElementById('dd-search-input').addEventListener('input', e => { state.search = e.target.value; renderRecipes(body); });
-    body.querySelectorAll('[data-protein]').forEach(el => el.addEventListener('click', () => { const p = el.dataset.protein; state.proteinFilter = state.proteinFilter===p?null:p; renderRecipes(body); }));
-    body.querySelectorAll('[data-bucket]').forEach(el => el.addEventListener('click', () => { const b = el.dataset.bucket; state.bucketFilter = b==='all'?null:b; renderRecipes(body); }));
+    let searchDebounce = null;
+    document.getElementById('dd-search-input').addEventListener('input', e => {
+      state.search = e.target.value;
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => renderRecipeGrid(body), 120);
+    });
+    body.querySelectorAll('[data-protein]').forEach(el => el.addEventListener('click', () => { const p = el.dataset.protein; state.proteinFilter = state.proteinFilter===p?null:p; renderRecipeGrid(body); }));
+    body.querySelectorAll('[data-bucket]').forEach(el => el.addEventListener('click', () => { const b = el.dataset.bucket; state.bucketFilter = b==='all'?null:b; renderRecipeGrid(body); }));
     document.getElementById('dd-add-recipe').addEventListener('click', () => openRecipeModal(null));
     const fixBtn = document.getElementById('dd-fix-surprise');
     if(fixBtn){
@@ -430,8 +432,16 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         renderRecipes(body);
       });
     }
-    body.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', ev => { if(ev.target.closest('.dd-check')) return; openRecipeModal(el.dataset.id); }));
-    body.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', async ev => { ev.stopPropagation(); await toggleWeek(el.dataset.id); renderRecipes(body); }));
+    renderRecipeGrid(body);
+  }
+
+  function renderRecipeGrid(body){
+    const list = filteredRecipes();
+    const grid = document.getElementById('dd-recipes-grid');
+    if(!grid) return;
+    grid.innerHTML = list.map(r => recipeCardHtml(r)).join('') || `<div class="dd-empty"><div class="display">No recipes match</div>Try a different search or filter.</div>`;
+    grid.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', ev => { if(ev.target.closest('.dd-check')) return; openRecipeModal(el.dataset.id); }));
+    grid.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', async ev => { ev.stopPropagation(); await toggleWeek(el.dataset.id); renderRecipeGrid(body); }));
   }
 
   function recipeCardHtml(r){
