@@ -17,7 +17,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
 .dd-tab.active { background:var(--primary); border-color:var(--primary); color:#fff; }
 .dd-shared-note { font-size:12px; color:var(--ink-soft); flex:1; min-width:250px; }
 .dd-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
-.dd-search { flex:1; min-width:200px; background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:8px 12px; border-radius:6px; font-size:14px; }
+.dd-search { flex:1; min-width:200px; background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:8px 12px; border-radius:6px; font-size:16px; }
 .dd-btn { background:var(--primary); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:14px; font-weight:500; }
 .dd-btn:hover { background:var(--primary-hover); }
 .dd-btn.secondary { background:var(--card-bg); color:var(--ink); border:1px solid var(--line); }
@@ -43,11 +43,11 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
 .dd-close { position:absolute; top:16px; right:16px; background:none; border:none; color:var(--ink-soft); font-size:24px; cursor:pointer; }
 .dd-field { margin-bottom:16px; }
 .dd-field label { display:block; font-size:12px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px; font-weight:600; }
-.dd-field input, .dd-field select, .dd-field textarea { width:100%; background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:8px 12px; border-radius:6px; box-sizing:border-box; }
+.dd-field input, .dd-field select, .dd-field textarea { width:100%; background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:8px 12px; border-radius:6px; box-sizing:border-box; font-size:16px; }
 .dd-row2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .dd-row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
 .dd-ingr-row { display:grid; grid-template-columns:60px 100px 1fr 120px 40px; gap:8px; margin-bottom:8px; }
-.dd-ingr-row input, .dd-ingr-row select { background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:4px 8px; border-radius:6px; }
+.dd-ingr-row input, .dd-ingr-row select { background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:4px 8px; border-radius:6px; font-size:16px; }
 .dd-modal-actions { display:flex; gap:12px; margin-top:24px; border-top:1px solid var(--line); padding-top:16px; flex-wrap:wrap; }
 .dd-help { font-size:12px; color:var(--ink-soft); }
 .dd-week-slots { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
@@ -71,7 +71,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
 .dd-glist-item .amt { font-weight:600; margin-right:6px; }
 .dd-glist-item .from { font-size:12px; color:var(--ink-soft); margin-left:8px; }
 .dd-warn-banner { background:#f9dcd9; border:1px solid var(--line); color:var(--danger); padding:12px; border-radius:6px; margin-bottom:16px; font-size:13px; }
-.dd-select-inline { background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:6px 12px; border-radius:6px; font-size:13px; }
+.dd-select-inline { background:var(--card-bg); border:1px solid var(--line); color:var(--ink); padding:6px 12px; border-radius:6px; font-size:16px; }
 .dd-autosave-note { font-size:11px; color:var(--ink-soft); margin-top:-8px; margin-bottom:16px; min-height:14px; }
 /* Shopping mode */
 .shop-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
@@ -102,8 +102,15 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
   .dd-week-slots { grid-template-columns:1fr 1fr; }
   .dd-toolbar { gap:8px; }
   .dd-search { min-width:0; }
+  .dd-guided-grid { grid-template-columns:1fr 1fr !important; }
+  .dd-check { width:32px; height:32px; }
+  .dd-glist-check { width:26px; height:26px; }
   .shop-row { padding:16px 14px; font-size:16px; }
   .shop-add-row input { font-size:16px; }
+}
+@media (max-width: 420px) {
+  .dd-week-slots { grid-template-columns:1fr; }
+  .dd-guided-grid { grid-template-columns:1fr !important; }
 }
 </style>
 </head>
@@ -844,7 +851,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         </select>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);">
           Nights this week:
-          <input type="number" id="dd-week-size" min="1" max="10" value="${state.weekSize}" style="width:52px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:13px;"/>
+          <input type="number" id="dd-week-size" min="1" max="10" value="${state.weekSize}" style="width:52px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:16px;"/>
         </label>
         <div style="flex:1;"></div>
         <span class="dd-help">${state.thisWeek.length}/${state.weekSize} slots filled</span>
@@ -873,7 +880,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       const isPairStart = r.makesLeftovers && state.thisWeek[i+1] === id;
       const isPairEnd = r.makesLeftovers && state.thisWeek[i-1] === id;
       return `
-        <div class="dd-slot filled">
+        <div class="dd-slot filled" data-view-id="${id}" style="cursor:pointer;">
           <div class="num">Slot ${i+1} · ${esc(r.protein)}${isTry?' · <span style="color:#614d0b;background:#f5eccd;padding:1px 4px;border-radius:3px;">want to try</span>':''}${(isPairStart||isPairEnd)?' · <span style="color:#2f5233;background:#dfeee0;padding:1px 4px;border-radius:3px;">leftovers</span>':''}</div>
           <h4>${esc(r.name)}</h4>
           <div class="meta">${r.cuisine?esc(r.cuisine)+' · ':''}${r.servings||'–'} servings${noIngr?' · <span style="color:var(--danger);">needs ingredients</span>':''}</div>
@@ -894,7 +901,11 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     }));
     slotsEl.querySelectorAll('[data-swap-idx]').forEach(el => el.addEventListener('click', () => { openSwapPicker(+el.dataset.swapIdx, body); }));
     slotsEl.querySelectorAll('[data-empty-idx]').forEach(el => el.addEventListener('click', () => { openFillPicker(+el.dataset.emptyIdx, body); }));
-    document.getElementById('dd-suggest').addEventListener('click', async () => { state.thisWeek = suggestWeek(); await saveMeta(); renderWeek(body); });
+    slotsEl.querySelectorAll('[data-view-id]').forEach(el => el.addEventListener('click', (ev) => {
+      if(ev.target.closest('[data-swap-idx]') || ev.target.closest('[data-remove-idx]')) return;
+      openRecipeModal(el.dataset.viewId);
+    }));
+    document.getElementById('dd-suggest').addEventListener('click', async () => { state.thisWeek = suggestWeek(); state.checkedGrocery = {}; await saveMeta(); renderWeek(body); });
     document.getElementById('dd-guided').addEventListener('click', () => openGuidedModal(body));
     document.getElementById('dd-try-chance').addEventListener('change', async e => { state.tryChance = parseFloat(e.target.value); await saveMeta(); });
     document.getElementById('dd-week-size').addEventListener('change', async e => {
@@ -926,7 +937,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         <button class="dd-close">&times;</button>
         <h2>Guided suggestions</h2>
         <div class="dd-help" style="margin-bottom:14px;">Set how many of each protein you want (up to ${state.weekSize} total meal-slots — leftover recipes use 2). Leave any at 0 to skip.</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+        <div class="dd-guided-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
           ${PROTEINS.map(p => `<div class="dd-field" style="margin-bottom:0;"><label>${esc(p)}</label><input type="number" min="0" max="${state.weekSize}" value="0" data-protein="${esc(p)}"/></div>`).join('')}
         </div>
         <div class="dd-field">
@@ -961,6 +972,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       const maxLeftovers = parseInt(back.querySelector('#g-leftovers').value);
       const result = guidedSuggestWeek(proteinCounts, maxTimeVal ? +maxTimeVal : null, isNaN(maxLeftovers) ? 1 : maxLeftovers);
       state.thisWeek = result.picked;
+      state.checkedGrocery = {};
       await saveMeta(); back.remove(); renderWeek(weekBody);
       if(result.shortfalls.length){ alert("Couldn't fully fill your request: " + result.shortfalls.map(s => `${s.protein} — wanted ${s.count}, only found ${s.found}`).join('; ')); }
     });
