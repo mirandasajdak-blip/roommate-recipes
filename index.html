@@ -525,7 +525,18 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
           ${total?`<span>· ${formatMinutes(total)} total</span>`:''}
           ${r.makesLeftovers?`<span class="dd-tag dd-badge-leftover">leftovers · 2 meals</span>`:''}
         </div>
-        ${(r.ingredients||[]).length ? `
+        ${(r.ingredients||[]).length ? (
+          r.recipeText ? `
+        <details class="dd-field">
+          <summary style="cursor:pointer;font-size:12px;text-transform:uppercase;color:var(--ink-soft);font-weight:600;">Ingredients (tap to show)</summary>
+          <ul style="margin:10px 0 0;padding-left:20px;line-height:1.7;">
+            ${r.ingredients.map(i => {
+              const amtDisplay = i.unit==='count' ? (i.amount||'') : `${i.amount||''} ${i.unit}`.trim();
+              return `<li>${amtDisplay?esc(amtDisplay)+' — ':''}${esc(i.name)}</li>`;
+            }).join('')}
+          </ul>
+        </details>
+          ` : `
         <div class="dd-field">
           <label>Ingredients</label>
           <ul style="margin:6px 0 0;padding-left:20px;line-height:1.7;">
@@ -535,7 +546,8 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
             }).join('')}
           </ul>
         </div>
-        ` : `<div class="dd-help" style="margin-bottom:12px;">No ingredients added yet.</div>`}
+          `
+        ) : `<div class="dd-help" style="margin-bottom:12px;">No ingredients added yet.</div>`}
         ${r.recipeText ? `
         <div class="dd-field">
           <label>Full recipe</label>
