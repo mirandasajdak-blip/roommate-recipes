@@ -164,6 +164,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     proteinFilter: null, bucketFilter: null, checkedGrocery: {}, extraGrocery: [],
     staples: ["salt","black pepper","olive oil","vegetable oil","butter","garlic powder","onion powder","cooking spray","flour","sugar"],
     staplesActive: {},
+    tapOpensView: true,
     tryChance: 1, weekSize: 5, loadError: false, loadErrorDetail: null, loadErrorCode: null, loaded: false
   };
 
@@ -266,7 +267,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     const payload = {
       id: 1, this_week: state.thisWeek, checked_grocery: state.checkedGrocery,
       extra_grocery: state.extraGrocery, try_chance: state.tryChance, week_size: state.weekSize,
-      staples: state.staples, staples_active: state.staplesActive,
+      staples: state.staples, staples_active: state.staplesActive, tap_opens_view: state.tapOpensView,
       updated_at: new Date().toISOString()
     };
     const { error } = await supabase.from('app_meta').upsert(payload);
@@ -300,6 +301,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         state.weekSize = metaRow.week_size || 5;
         state.staples = metaRow.staples !== undefined && metaRow.staples !== null ? metaRow.staples : state.staples;
         state.staplesActive = metaRow.staples_active || {};
+        state.tapOpensView = metaRow.tap_opens_view !== undefined && metaRow.tap_opens_view !== null ? metaRow.tap_opens_view : true;
       }
     } catch(err){
       console.error("Database loading failed:", err);
@@ -418,9 +420,18 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${PROTEINS.map(p => `<div class="dd-chip ${state.proteinFilter===p?'on':''}" data-protein="${esc(p)}">${esc(p)}</div>`).join('')}
         </div>
+        <div style="width:1px;background:var(--line);align-self:stretch;"></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);cursor:pointer;">
+          <input type="checkbox" id="dd-tap-view-toggle" style="width:auto;" ${state.tapOpensView?'checked':''}/>
+          Tapping a recipe opens View mode (uncheck to jump straight to Edit)
+        </label>
       </div>
       <div class="dd-grid" id="dd-recipes-grid"></div>
     `;
+    document.getElementById('dd-tap-view-toggle').addEventListener('change', async (e) => {
+      state.tapOpensView = e.target.checked;
+      await saveMeta();
+    });
     let searchDebounce = null;
     document.getElementById('dd-search-input').addEventListener('input', e => {
       state.search = e.target.value;
@@ -447,7 +458,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     const grid = document.getElementById('dd-recipes-grid');
     if(!grid) return;
     grid.innerHTML = list.map(r => recipeCardHtml(r)).join('') || `<div class="dd-empty"><div class="display">No recipes match</div>Try a different search or filter.</div>`;
-    grid.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', ev => { if(ev.target.closest('.dd-check')) return; openRecipeModal(el.dataset.id); }));
+    grid.querySelectorAll('.dd-card').forEach(el => el.addEventListener('click', ev => { if(ev.target.closest('.dd-check')) return; if(state.tapOpensView) openRecipeViewModal(el.dataset.id); else openRecipeModal(el.dataset.id); }));
     grid.querySelectorAll('.dd-check').forEach(el => el.addEventListener('click', async ev => { ev.stopPropagation(); await toggleWeek(el.dataset.id); renderRecipeGrid(body); }));
   }
 
@@ -494,6 +505,61 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
       if(slotsNeeded === 2) state.thisWeek.push(id);
     }
     await saveMeta();
+  }
+
+  function openRecipeViewModal(id){
+    const r = getRecipe(id);
+    if(!r) return;
+    const total = (r.prepMinutes||0)+(r.cookMinutes||0);
+    const back = document.createElement('div');
+    back.className = 'dd-modal-back';
+    back.innerHTML = `
+      <div class="dd-modal">
+        <button class="dd-close">&times;</button>
+        <h2 style="margin-bottom:8px;">${esc(r.name)}</h2>
+        <div class="meta" style="margin-bottom:16px;">
+          ${(r.bucket||'rotation')==='tryList'?`<span class="dd-tag dd-badge-try">Want to try</span>`:''}
+          <span class="dd-tag">${esc(r.protein)}</span>
+          ${r.cuisine?`<span class="dd-tag">${esc(r.cuisine)}</span>`:''}
+          <span>${r.servings||'–'} servings</span>
+          ${total?`<span>· ${formatMinutes(total)} total</span>`:''}
+          ${r.makesLeftovers?`<span class="dd-tag dd-badge-leftover">leftovers · 2 meals</span>`:''}
+        </div>
+        ${(r.ingredients||[]).length ? `
+        <div class="dd-field">
+          <label>Ingredients</label>
+          <ul style="margin:6px 0 0;padding-left:20px;line-height:1.7;">
+            ${r.ingredients.map(i => {
+              const amtDisplay = i.unit==='count' ? (i.amount||'') : `${i.amount||''} ${i.unit}`.trim();
+              return `<li>${amtDisplay?esc(amtDisplay)+' — ':''}${esc(i.name)}</li>`;
+            }).join('')}
+          </ul>
+        </div>
+        ` : `<div class="dd-help" style="margin-bottom:12px;">No ingredients added yet.</div>`}
+        ${r.recipeText ? `
+        <div class="dd-field">
+          <label>Full recipe</label>
+          <div style="white-space:pre-wrap;line-height:1.6;">${esc(r.recipeText)}</div>
+        </div>
+        ` : ''}
+        ${r.notes ? `
+        <div class="dd-field">
+          <label>Notes</label>
+          <div style="white-space:pre-wrap;line-height:1.6;color:var(--ink-soft);">${esc(r.notes)}</div>
+        </div>
+        ` : ''}
+        <div class="dd-modal-actions">
+          <div style="flex:1;"></div>
+          <button class="dd-btn secondary" id="v-close">Close</button>
+          <button class="dd-btn" id="v-edit">Edit</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(back);
+    back.querySelector('.dd-close').addEventListener('click', () => back.remove());
+    back.querySelector('#v-close').addEventListener('click', () => back.remove());
+    back.addEventListener('click', e => { if(e.target === back) back.remove(); });
+    back.querySelector('#v-edit').addEventListener('click', () => { back.remove(); openRecipeModal(id); });
   }
 
   function openRecipeModal(id){
@@ -903,7 +969,7 @@ body { background-color:var(--bg); color:var(--ink); font-family:-apple-system,B
     slotsEl.querySelectorAll('[data-empty-idx]').forEach(el => el.addEventListener('click', () => { openFillPicker(+el.dataset.emptyIdx, body); }));
     slotsEl.querySelectorAll('[data-view-id]').forEach(el => el.addEventListener('click', (ev) => {
       if(ev.target.closest('[data-swap-idx]') || ev.target.closest('[data-remove-idx]')) return;
-      openRecipeModal(el.dataset.viewId);
+      if(state.tapOpensView) openRecipeViewModal(el.dataset.viewId); else openRecipeModal(el.dataset.viewId);
     }));
     document.getElementById('dd-suggest').addEventListener('click', async () => { state.thisWeek = suggestWeek(); state.checkedGrocery = {}; await saveMeta(); renderWeek(body); });
     document.getElementById('dd-guided').addEventListener('click', () => openGuidedModal(body));
